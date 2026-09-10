@@ -1156,7 +1156,18 @@ Begin with a clear research question that addresses an impactful issue in your l
         )}
 
         <div className={`w-full max-w-7xl lg:max-w-none mx-auto ${loading ? 'py-4' : 'py-6'} px-6 sm:px-10 lg:px-12 text-center text-[11px] text-stone-500 font-sans flex flex-col sm:flex-row items-center justify-between gap-4`}>
-          <p>© 2026 impactED Student Publishing Group. All student authors retain full publication ownership of their articles.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <p>© 2026 impactED Student Publishing Group. All student authors retain full publication ownership of their articles.</p>
+            <span className="hidden sm:inline text-stone-300">•</span>
+            <a 
+              href="https://impactedglobal.xyz" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[#523624] hover:text-stone-900 font-bold underline underline-offset-2 transition-colors"
+            >
+              impactedglobal.xyz ↗
+            </a>
+          </div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[9px] uppercase tracking-wider bg-stone-100 px-2 py-0.5 border border-[#d1cfc0]">Est. 2024</span>
             <p className="font-mono text-[9px]">PROJECT ID: peta-watch-85jvd (Firestore Active)</p>
