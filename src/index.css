@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Caveat:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400..700;1,400..700&family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", serif;
+  --font-serif: "Lora", Georgia, serif;
+  --font-chalk: "Architects Daughter", cursive;
+  --font-hand: "Caveat", cursive;
+  --font-minimal: "Outfit", "Inter", sans-serif;
+  --font-mono: "Outfit", monospace;
+  --font-productsans: "Product Sans", "Outfit", "Inter", sans-serif;
+
+  /* Custom earth-tone brown palette overrides based on attached image palette */
+  --color-emerald-50: #fdf6ee;
+  --color-emerald-100: #fcdcb6;
+  --color-emerald-200: #f8c992;
+  --color-emerald-300: #f1b272;
+  --color-emerald-400: #e8a76d;
+  --color-emerald-500: #d48b4f;
+  --color-emerald-600: #9c6a48;
+  --color-emerald-700: #7b5033;
+  --color-emerald-800: #523624;
+  --color-emerald-900: #3d2517;
+  --color-emerald-950: #2a180d;
+
+  --color-green-50: #fdf6ee;
+  --color-green-100: #fcdcb6;
+  --color-green-200: #f8c992;
+  --color-green-300: #f1b272;
+  --color-green-400: #e8a76d;
+  --color-green-500: #d48b4f;
+  --color-green-600: #9c6a48;
+  --color-green-700: #7b5033;
+  --color-green-800: #523624;
+  --color-green-900: #3d2517;
+  --color-green-950: #2a180d;
+}
+
+body {
+  background-color: #fdfcf0;
+  color: #1a1a1a;
+}
+
+/* Chalkboard and Chalk Text Styling */
+.chalkboard-texture {
+  background: radial-gradient(circle, #3a2214 0%, #24130a 65%, #120803 100%);
+  position: relative;
+}
+
+.chalkboard-texture::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0%200%20200%20200'%20xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter%20id='noiseFilter'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.65'%20numOctaves='3'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200%200.08%200'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.chalk-text-white {
+  font-family: "Architects Daughter", cursive;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.4), 1px 1px 1px rgba(0, 0, 0, 0.2);
+  filter: drop-shadow(0px 1px 1px rgba(255,255,255,0.2));
+}
+
+.chalk-text-yellow {
+  font-family: "Architects Daughter", cursive;
+  color: rgba(254, 240, 138, 0.9);
+  text-shadow: 0 0 4px rgba(254, 240, 138, 0.4), 1px 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.chalk-text-blue {
+  font-family: "Architects Daughter", cursive;
+  color: rgba(191, 219, 254, 0.9);
+  text-shadow: 0 0 4px rgba(191, 219, 254, 0.4), 1px 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.chalk-text-pink {
+  font-family: "Architects Daughter", cursive;
+  color: rgba(252, 165, 165, 0.9);
+  text-shadow: 0 0 4px rgba(252, 165, 165, 0.4), 1px 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* Notebook Paper Style */
+.notebook-paper {
+  background-color: #fcfbf7;
+  line-height: 24px;
+}
+
+/* Hand Written Notes */
+.hand-written {
+  font-family: "Caveat", cursive;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Grade Stamp Effect */
+.grade-stamp {
+  border: 3px dashed #ef4444;
+  color: #ef4444;
+  font-family: 'Caveat', cursive;
+  font-weight: bold;
+  transform: rotate(-12deg);
+  border-radius: 8px;
+  box-shadow: 0 0 0 3px transparent;
+}

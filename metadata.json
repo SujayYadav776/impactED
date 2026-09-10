@@ -1,0 +1,6 @@
+{
+  "name": "impactED",
+  "description": "A global student blogging & publishing platform. Students worldwide can share written essays, creative pieces, and opinion articles, with human moderation, community comments, and lightweight reactions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

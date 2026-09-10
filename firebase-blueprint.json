@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "article": {
+      "title": "Article",
+      "description": "A student essay, article, or poem.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorSchool": { "type": "string" },
+        "authorCountry": { "type": "string" },
+        "status": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "readingTime": { "type": "integer" },
+        "wordCount": { "type": "integer" },
+        "commentsCount": { "type": "integer" },
+        "reactions": { "type": "object" },
+        "userReactions": { "type": "object" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "summary", "content", "category", "authorId", "authorName", "status"]
+    },
+    "comment": {
+      "title": "Comment",
+      "description": "A user comment or peer review note.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "articleId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorSchool": { "type": "string" },
+        "authorCountry": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "reportsCount": { "type": "integer" },
+        "isHidden": { "type": "boolean" }
+      },
+      "required": ["id", "articleId", "authorId", "authorName", "content", "createdAt"]
+    },
+    "profile": {
+      "title": "UserProfile",
+      "description": "User profile containing school and role details.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "school": { "type": "string" },
+        "country": { "type": "string" },
+        "bio": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "badges": { "type": "array" },
+        "bookmarks": { "type": "array" }
+      },
+      "required": ["uid", "email", "displayName", "role"]
+    }
+  },
+  "firestore": {
+    "articles/{articleId}": {
+      "schema": "article",
+      "description": "Collection of student essays and articles."
+    },
+    "comments/{commentId}": {
+      "schema": "comment",
+      "description": "Collection of student comments and reviews."
+    },
+    "profiles/{profileId}": {
+      "schema": "profile",
+      "description": "Collection of user profiles."
+    }
+  }
+}
