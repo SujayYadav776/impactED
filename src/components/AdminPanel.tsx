@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Article, Comment, UserProfile, CATEGORIES, COUNTRIES, AuditLog, SiteStats } from '../types';
 import { firebaseService } from '../firebaseService';
+import { calculateReadingTime } from '../utils/readingTime';
 import { 
   CheckCircle, 
   XCircle, 
@@ -29,7 +30,14 @@ import {
   Plus,
   Search,
   History,
-  Upload
+  Upload,
+  Image as ImageIcon,
+  ChevronDown,
+  CheckCircle2,
+  AlertCircle,
+  RotateCcw,
+  Check,
+  Undo2
 } from 'lucide-react';
 
 const PRESET_COVERS = [
@@ -366,6 +374,28 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
   const [dsAuthorCountry, setDsAuthorCountry] = useState(COUNTRIES[0].name);
   const [dsStatus, setDsStatus] = useState<'Published' | 'Submitted'>('Published');
   const [dsSaving, setDsSaving] = useState(false);
+  const [dsShowUrlInput, setDsShowUrlInput] = useState(false);
+  const [dsTargetLevel, setDsTargetLevel] = useState('High School (Grades 9-12)');
+  const [dsPledgeOriginal, setDsPledgeOriginal] = useState(true);
+  const [dsPledgeGuidelines, setDsPledgeGuidelines] = useState(true);
+  const [dsPledgeCite, setDsPledgeCite] = useState(true);
+
+  const handleResetDsForm = () => {
+    setDsTitle('');
+    setDsSummary('');
+    setDsContent('');
+    setDsCategory(CATEGORIES[0]);
+    setDsType('blog');
+    setDsTags('');
+    setDsCover(PRESET_COVERS[0].url);
+    setDsAuthorName('');
+    setDsAuthorSchool('');
+    setDsAuthorCountry(COUNTRIES[0].name);
+    setDsStatus('Published');
+    setDsUploadError(null);
+    setDsShowUrlInput(false);
+    showAdminNotification('Direct submission intake form reset.', 'info');
+  };
 
   // SLA Live Stop Watch Clock States (Donezo "Time Tracker" replica)
   const [timerTime, setTimerTime] = useState(84 * 60 + 8); // 01:24:08 initially in seconds
@@ -612,10 +642,10 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
       setRecentlyDeleted(null);
       loadAdminData();
       onRefreshFeed();
-      alert("🎉 Publication restored successfully!");
+      showAdminNotification("Publication restored successfully!", 'success');
     } catch (err) {
       console.error("Failed to restore article:", err);
-      alert("Failed to restore article. Please try again.");
+      showAdminNotification("Failed to restore article. Please try again.", 'error');
     }
   };
 
@@ -629,30 +659,34 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
   };
 
   const getDsWordCount = () => {
-    if (!dsContent.trim()) return 0;
-    return dsContent.trim().split(/\s+/).length;
+    return calculateReadingTime(dsContent).wordCount;
   };
 
   const getDsReadingTime = () => {
-    const words = getDsWordCount();
-    return Math.max(1, Math.ceil(words / 150));
+    return calculateReadingTime(dsContent).minutes;
   };
 
   const handleDirectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!dsTitle.trim() || !dsSummary.trim() || !dsContent.trim() || !dsAuthorName.trim() || !dsAuthorSchool.trim()) {
-      alert("Please fill in all the required fields (*).");
+    if (!dsTitle.trim() || !dsContent.trim() || !dsAuthorName.trim() || !dsAuthorSchool.trim()) {
+      showAdminNotification("Please fill in Title, Content, Student Name, and School Affiliation (*).", "error");
+      return;
+    }
+
+    if (!dsPledgeOriginal || !dsPledgeGuidelines || !dsPledgeCite) {
+      showAdminNotification("Please confirm the Editorial Verification & Honor Check items before intake.", "error");
       return;
     }
 
     setDsSaving(true);
 
     const articleId = 'art-direct-' + Date.now();
+    const fallbackSummary = dsContent.replace(/^[#*`>\s-]+/gm, '').trim().slice(0, 220);
     const newArticle: Article = {
       id: articleId,
       title: dsTitle.trim(),
-      summary: dsSummary.trim(),
+      summary: dsSummary.trim() || fallbackSummary || 'Scholastic research manuscript.',
       content: dsContent.trim(),
       category: dsCategory,
       type: dsType,
@@ -672,7 +706,7 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
 
     try {
       await firebaseService.saveArticle(newArticle);
-      alert(`🎉 Article "${dsTitle.trim()}" has been successfully uploaded directly and set to "${dsStatus}" status!`);
+      showAdminNotification(`Article "${dsTitle.trim()}" successfully uploaded and set to "${dsStatus}"!`, "success");
       
       await logAdminAction(
         dsStatus === 'Published' ? 'direct_publish' : 'direct_submit',
@@ -683,12 +717,7 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
       );
 
       // Reset form
-      setDsTitle('');
-      setDsSummary('');
-      setDsContent('');
-      setDsTags('');
-      setDsAuthorName('');
-      setDsAuthorSchool('');
+      handleResetDsForm();
       
       // Refresh
       loadAdminData();
@@ -696,7 +725,7 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
       setActiveTab('submissions');
     } catch (err) {
       console.error(err);
-      alert("Failed to submit article directly. Please try again.");
+      showAdminNotification("Failed to submit article directly. Please try again.", "error");
     } finally {
       setDsSaving(false);
     }
@@ -707,7 +736,7 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
   const moderatedArticles = articles.filter(a => a.status === 'Published' || a.status === 'Rejected' || a.status === 'Revision Requested');
 
   return (
-    <div className="bg-white border border-stone-200 rounded-2xl shadow-xl p-6 sm:p-8 max-w-5xl mx-auto">
+    <div className="bg-white border border-stone-200 rounded-2xl shadow-xl p-6 sm:p-8 max-w-6xl mx-auto">
       
       {/* Admin Panel Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-100 pb-5 mb-6">
@@ -1696,223 +1725,130 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
+          className="space-y-6 font-productsans"
         >
-          <div className="bg-emerald-500/5 border border-emerald-600/10 p-4 rounded-xl flex items-center gap-3">
-            <BookOpen className="w-5 h-5 text-emerald-700 shrink-0" />
-            <div>
-              <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider font-display">
-                Company Mail & Offline Intake Portal
-              </h4>
-              <p className="text-[11px] text-emerald-900/80 mt-0.5 font-sans">
-                Manually publish essays, creative papers, or feedback drafts sent to your company's submission email address. Direct submissions will credit the specified student's name, school, and country.
-              </p>
+          {/* Top Header Section matching the student publication page */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 -mt-1 mb-6 pb-3 border-b border-gray-100">
+            <div className="pl-1">
+              <h1 className="font-productsans flex flex-wrap items-baseline gap-x-1.5 text-[17px]">
+                <span className="font-bold text-gray-900">Direct Publication & Intake</span>
+                <span className="text-gray-500 font-normal pl-0 mt-1">
+                  manually publish offline student manuscripts or submitted research papers
+                </span>
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleResetDsForm}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50/80 hover:bg-emerald-100/80 text-emerald-700 text-xs sm:text-sm font-semibold rounded-xl border border-emerald-200/70 transition-colors shadow-2xs font-productsans cursor-pointer"
+              >
+                <span>Reset Fields</span>
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          <form onSubmit={handleDirectSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <form onSubmit={handleDirectSubmit}>
+            {/* Main 2-Column Grid matching ArticleEditor layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
-              {/* Left & Center: Submission Content Details (2 cols) */}
-              <div className="md:col-span-2 space-y-4">
+              {/* ================= LEFT COLUMN (Col Span 7) ================= */}
+              <div className="lg:col-span-7 space-y-6">
                 
-                {/* Title */}
-                <div>
-                  <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5 font-display">
-                    Article Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={dsTitle}
-                    onChange={(e) => setDsTitle(e.target.value)}
-                    placeholder="e.g. The Socio-Economic Repercussions of Vertical Farming"
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-xs text-stone-900 font-semibold focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
+                {/* CARD 1: Name & Description */}
+                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-6 space-y-5">
+                  <h2 className="text-base font-bold text-gray-900 font-productsans tracking-tight">
+                    Name & Description
+                  </h2>
 
-                {/* Abstract Summary */}
-                <div>
-                  <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5 font-display">
-                    Abstract / Summary *
-                  </label>
-                  <textarea
-                    required
-                    value={dsSummary}
-                    onChange={(e) => setDsSummary(e.target.value)}
-                    placeholder="Write a brief 1-2 sentence overview/abstract of the paper..."
-                    rows={2}
-                    maxLength={250}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 text-xs text-stone-800 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
-                  />
-                  <span className="text-[10px] text-stone-400 mt-1 block text-right font-mono">
-                    {dsSummary.length}/250 characters
-                  </span>
-                </div>
-
-                {/* Content Editor Box */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-stone-600 uppercase tracking-wider font-display">
-                      Article Content (Markdown support) *
-                    </label>
-                    <div className="flex items-center gap-3 text-[10px] text-stone-400 font-mono">
-                      <span>Word Count: <span className="font-semibold text-stone-700">{getDsWordCount()}</span></span>
-                      <span>Est. Reading: <span className="font-semibold text-stone-700">{getDsReadingTime()} min</span></span>
-                    </div>
-                  </div>
-                  <textarea
-                    required
-                    value={dsContent}
-                    onChange={(e) => setDsContent(e.target.value)}
-                    placeholder="Paste or write the article content here. Support headers with ###, bold with **, and lists."
-                    rows={12}
-                    className="w-full bg-stone-50 border border-stone-200 rounded-lg p-4 text-xs font-mono leading-relaxed focus:outline-hidden focus:ring-1 focus:ring-emerald-500 text-stone-950 shadow-inner"
-                  />
-                </div>
-
-              </div>
-
-              {/* Right Sidebar: Student Author Metadata & Covers (1 col) */}
-              <div className="space-y-4">
-                
-                {/* Student Info Group */}
-                <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-3.5">
-                  <span className="block text-xs font-bold text-stone-700 uppercase tracking-wider font-display border-b border-stone-200 pb-1.5">
-                    Student Author (Mail Sender)
-                  </span>
-
+                  {/* Title Input */}
                   <div>
-                    <label className="block text-[10px] text-stone-500 font-sans mb-1 font-semibold">
-                      Student Name *
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                      Publication Title <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
-                      value={dsAuthorName}
-                      onChange={(e) => setDsAuthorName(e.target.value)}
-                      placeholder="e.g. Julianne Chen"
-                      className="w-full bg-white border border-stone-200 rounded p-1.5 text-xs text-stone-800 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                      value={dsTitle}
+                      onChange={(e) => setDsTitle(e.target.value)}
+                      placeholder="e.g. The Quantum Computing Divide in Modern Education"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-productsans font-medium"
                     />
                   </div>
 
+                  {/* Abstract / Summary */}
                   <div>
-                    <label className="block text-[10px] text-stone-500 font-sans mb-1 font-semibold">
-                      High School / Institution *
-                    </label>
-                    <input
-                      type="text"
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider font-productsans">
+                        Abstract / Summary <span className="text-rose-500">*</span>
+                      </label>
+                      <span className="text-[11px] text-gray-400 font-productsans">
+                        {dsSummary.length}/250 characters
+                      </span>
+                    </div>
+                    <textarea
                       required
-                      value={dsAuthorSchool}
-                      onChange={(e) => setDsAuthorSchool(e.target.value)}
-                      placeholder="e.g. Raffles Institution"
-                      className="w-full bg-white border border-stone-200 rounded p-1.5 text-xs text-stone-800 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                      value={dsSummary}
+                      onChange={(e) => setDsSummary(e.target.value)}
+                      placeholder="Write a brief 1-2 sentence overview/abstract of the paper..."
+                      rows={2}
+                      maxLength={250}
+                      className="w-full bg-white border border-gray-200 rounded-xl p-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-productsans leading-relaxed resize-y"
                     />
                   </div>
 
+                  {/* Manuscript Body Content */}
                   <div>
-                    <label className="block text-[10px] text-stone-500 font-sans mb-1 font-semibold">
-                      Country *
-                    </label>
-                    <select
-                      value={dsAuthorCountry}
-                      onChange={(e) => setDsAuthorCountry(e.target.value)}
-                      className="w-full bg-white border border-stone-200 rounded p-1.5 text-xs text-stone-800 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
-                    >
-                      {COUNTRIES.map(c => (
-                        <option key={c.name} value={c.name}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Article Placement Config */}
-                <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-3.5">
-                  <span className="block text-xs font-bold text-stone-700 uppercase tracking-wider font-display border-b border-stone-200 pb-1.5">
-                    Publishing Settings
-                  </span>
-
-                  <div>
-                    <label className="block text-[10px] text-stone-500 font-sans mb-1 font-semibold">
-                      Publication Type *
-                    </label>
-                    <div className="w-full bg-stone-100 border border-stone-200 rounded p-2 text-xs text-stone-700 font-semibold flex items-center justify-between">
-                      <span>Blog Format</span>
-                      <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold">BLOG</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider font-productsans">
+                        Full Manuscript Content <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="flex items-center gap-3 text-xs text-gray-500 font-productsans">
+                        <span>Words: <strong className="text-gray-800">{getDsWordCount()}</strong></span>
+                        <span>•</span>
+                        <span>Est: <strong className="text-gray-800">{getDsReadingTime()} min read</strong></span>
+                      </div>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-stone-500 font-sans mb-1 font-semibold">
-                      Keywords (Comma-separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={dsTags}
-                      onChange={(e) => setDsTags(e.target.value)}
-                      placeholder="e.g. Agriculture, STEM, Green"
-                      className="w-full bg-white border border-stone-200 rounded p-1.5 text-xs text-stone-800 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                    <textarea
+                      required
+                      value={dsContent}
+                      onChange={(e) => setDsContent(e.target.value)}
+                      placeholder={`# Introduction\nPresent the main scholarly question or hypothesis...\n\n## Research & Evidence\nDetail the student's key arguments, historical evidence, or experimentation...\n\n## Conclusion & References\nSummarize findings and attribute sources.`}
+                      rows={13}
+                      className="w-full bg-white border border-gray-200 rounded-xl p-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-productsans leading-relaxed resize-y min-h-[260px]"
                     />
+                    <p className="text-[11px] text-gray-400 mt-1.5 font-productsans">
+                      Markdown supported: Use # for main headers, ## for subheadings, **bold**, and *lists.
+                    </p>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] text-stone-500 font-sans mb-1 font-semibold">
-                      Submission Status *
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDsStatus('Published')}
-                        className={`flex-1 py-1.5 px-2 rounded border text-xs font-semibold transition-all ${dsStatus === 'Published' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}
-                      >
-                        Publish Now
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDsStatus('Submitted')}
-                        className={`flex-1 py-1.5 px-2 rounded border text-xs font-semibold transition-all ${dsStatus === 'Submitted' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-800' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}
-                      >
-                        Queue Review
-                      </button>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Cover Template Selection */}
-                <div className="bg-stone-50 border border-stone-200 p-4 rounded-xl space-y-3">
-                  <span className="block text-xs font-bold text-stone-700 uppercase tracking-wider font-display border-b border-stone-200 pb-1.5">
-                    Cover Design
-                  </span>
-                  
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {PRESET_COVERS.map(cover => (
-                      <button
-                        key={cover.name}
-                        type="button"
-                        onClick={() => setDsCover(cover.url)}
-                        className={`aspect-[4/3] rounded overflow-hidden border relative hover:scale-105 transition-transform ${dsCover === cover.url ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-stone-300'}`}
-                      >
-                        <img src={cover.url} alt={cover.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        <div className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-[8px] text-white text-center truncate">
-                          {cover.name.split(' ')[0]}
-                        </div>
-                      </button>
-                    ))}
+                {/* CARD 2: Publication Image (matching the student publication page design) */}
+                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-bold text-gray-900 font-productsans tracking-tight">
+                      Publication Image
+                    </h2>
+                    <span className="text-xs text-gray-400 font-productsans">Scholastic Cover Banner</span>
                   </div>
 
-                  {/* Manual Cover Image Upload */}
-                  <div className="space-y-2 pt-1 border-t border-stone-200/60">
-                    <span className="text-[10px] text-stone-500 font-sans block">Or upload custom cover image:</span>
+                  {/* Side by side upload & preview matching the screenshot layout */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+                    
+                    {/* Left: Dashed Upload Box with Mint Accent */}
                     <div
                       onDragOver={handleDsDragOver}
                       onDragLeave={handleDsDragLeave}
                       onDrop={handleDsDrop}
-                      className={`border-2 border-dashed rounded-lg p-3 text-center transition-all cursor-pointer flex flex-col items-center justify-center min-h-[90px] ${
-                        dsIsDragging
-                          ? 'border-emerald-500 bg-emerald-50/50'
-                          : 'border-stone-200 bg-white hover:border-emerald-400 hover:bg-stone-50/50'
-                      }`}
                       onClick={() => document.getElementById('ds-cover-file-input')?.click()}
+                      className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[160px] ${
+                        dsIsDragging
+                          ? 'border-emerald-500 bg-emerald-50/70 scale-[1.01]'
+                          : 'border-emerald-400/80 bg-emerald-50/30 hover:bg-emerald-50/60 hover:border-emerald-500'
+                      }`}
                     >
                       <input
                         id="ds-cover-file-input"
@@ -1923,46 +1859,328 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
                       />
                       
                       {dsIsUploading ? (
-                        <div className="flex flex-col items-center gap-1.5">
-                          <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                          <span className="text-[10px] text-stone-500">Processing image...</span>
-                        </div>
-                      ) : dsCover.startsWith('data:image/') ? (
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="relative w-12 h-9 rounded overflow-hidden border border-stone-200">
-                            <img src={dsCover} alt="Uploaded preview" className="w-full h-full object-cover" />
-                          </div>
-                          <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
-                            ✓ Custom Image Loaded
-                          </span>
-                          <span className="text-[8px] text-stone-400">Click or drag new to replace</span>
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                          <span className="text-xs font-medium text-gray-600 font-productsans">Optimizing image...</span>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center gap-1">
-                          <Upload className="w-4 h-4 text-stone-400" />
-                          <span className="text-[10px] text-stone-600 font-medium">Click or Drag & Drop image</span>
-                          <span className="text-[8px] text-stone-400">PNG, JPG up to 5MB</span>
+                        <div className="flex flex-col items-center gap-2.5">
+                          <div className="w-11 h-11 rounded-xl bg-white border border-emerald-200/60 flex items-center justify-center text-emerald-600 shadow-2xs">
+                            <Upload className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="text-sm font-bold text-emerald-700 font-productsans block">
+                              Upload Image
+                            </span>
+                            <span className="text-[11px] text-gray-400 font-productsans block mt-0.5">
+                              Drag & drop or browse (PNG, JPG)
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
-                    
-                    {dsUploadError && (
-                      <p className="text-[9px] text-red-600 font-medium leading-tight">
-                        ⚠️ {dsUploadError}
-                      </p>
-                    )}
+
+                    {/* Right: Clean Image Preview Container */}
+                    <div className="w-full h-full min-h-[160px] rounded-2xl border border-gray-200/90 bg-gray-50 flex items-center justify-center overflow-hidden relative group">
+                      {dsCover ? (
+                        <img 
+                          src={dsCover} 
+                          alt="Publication Cover Preview" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="text-center p-4 text-gray-400">
+                          <ImageIcon className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                          <span className="text-xs font-productsans">No cover image selected</span>
+                        </div>
+                      )}
+                      
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2.5 flex items-center justify-between text-white text-xs">
+                        <span className="truncate text-[11px] font-medium font-productsans">Active Cover</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDsShowUrlInput(!dsShowUrlInput);
+                          }}
+                          className="text-[10px] bg-white/20 hover:bg-white/30 backdrop-blur-xs px-2 py-0.5 rounded font-productsans transition-colors cursor-pointer"
+                        >
+                          {dsShowUrlInput ? 'Hide URL' : 'Custom URL'}
+                        </button>
+                      </div>
+                    </div>
+
                   </div>
 
+                  {dsUploadError && (
+                    <p className="text-xs text-rose-600 font-medium font-productsans flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{dsUploadError}</span>
+                    </p>
+                  )}
+
+                  {/* Optional direct URL input */}
+                  {dsShowUrlInput && (
+                    <div className="pt-2">
+                      <label className="block text-[11px] font-medium text-gray-500 font-productsans mb-1">
+                        Image Source URL
+                      </label>
+                      <input
+                        type="url"
+                        value={dsCover}
+                        onChange={(e) => setDsCover(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-productsans"
+                      />
+                    </div>
+                  )}
+
+                  {/* Quick Preset Covers selection chips */}
+                  <div className="pt-2 border-t border-gray-100">
+                    <span className="text-[11px] font-medium text-gray-500 font-productsans block mb-2">
+                      Or choose a scholarly preset theme:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {PRESET_COVERS.map(preset => (
+                        <button
+                          key={preset.name}
+                          type="button"
+                          onClick={() => {
+                            setDsCover(preset.url);
+                            setDsUploadError(null);
+                          }}
+                          className={`relative aspect-[16/10] rounded-xl overflow-hidden border transition-all text-left group cursor-pointer ${
+                            dsCover === preset.url 
+                              ? 'ring-2 ring-emerald-600 border-emerald-600 shadow-2xs' 
+                              : 'border-gray-200 hover:border-gray-300 opacity-80 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-colors" />
+                          <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-semibold text-white truncate font-productsans drop-shadow-xs">
+                            {preset.name.split(' ')[0]}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* ================= RIGHT COLUMN (Col Span 5) ================= */}
+              <div className="lg:col-span-5 space-y-6">
+                
+                {/* CARD 1: Category & Format */}
+                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-6 space-y-4">
+                  <h2 className="text-base font-bold text-gray-900 font-productsans tracking-tight">
+                    Category & Format
+                  </h2>
+
+                  {/* Category Dropdown */}
                   <div>
-                    <label className="block text-[9px] text-stone-400 font-sans mb-0.5">
-                      Or paste a custom image URL:
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                      Academic Category <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={dsCategory}
+                        onChange={(e) => setDsCategory(e.target.value)}
+                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 appearance-none font-productsans font-medium cursor-pointer pr-10"
+                      >
+                        {CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Publication Format Dropdown */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                      Publication Format
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={dsType}
+                        onChange={(e) => setDsType(e.target.value as 'blog' | 'essay' | 'article')}
+                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 appearance-none font-productsans font-medium cursor-pointer pr-10"
+                      >
+                        <option value="blog">Student Blog & Reflection</option>
+                        <option value="essay">Academic Research Essay</option>
+                        <option value="article">Scholastic Review Article</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* CARD 2: Manage Archival Details */}
+                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-6 space-y-4">
+                  <h2 className="text-base font-bold text-gray-900 font-productsans tracking-tight">
+                    Manage Archival Details
+                  </h2>
+
+                  {/* Manuscript Reference DOI */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                      Archival Intake Identifier (DOI)
                     </label>
                     <input
-                      type="url"
-                      value={dsCover}
-                      onChange={(e) => setDsCover(e.target.value)}
-                      className="w-full bg-white border border-stone-200 rounded p-1 text-[10px] text-stone-700 focus:outline-hidden"
+                      type="text"
+                      readOnly
+                      value="IMP-DIRECT-INTAKE"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 font-mono focus:outline-none cursor-default font-semibold"
                     />
+                  </div>
+
+                  {/* Grid: Reading Time & Status */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                        Reading Time
+                      </label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${getDsReadingTime()} Mins`}
+                        className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-productsans font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                        Intake Status
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={dsStatus}
+                          onChange={(e) => setDsStatus(e.target.value as 'Published' | 'Submitted')}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 appearance-none font-productsans font-medium cursor-pointer pr-7 truncate"
+                        >
+                          <option value="Published">Publish Directly</option>
+                          <option value="Submitted">Queue for Review</option>
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* CARD 3: Attribution & Indexing (Student Author Details) */}
+                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-6 space-y-4">
+                  <h2 className="text-base font-bold text-gray-900 font-productsans tracking-tight">
+                    Attribution & Indexing
+                  </h2>
+
+                  {/* 2x2 Field Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                        Student Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={dsAuthorName}
+                        onChange={(e) => setDsAuthorName(e.target.value)}
+                        placeholder="e.g. Julianne Chen"
+                        className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-productsans font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                        Institution <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={dsAuthorSchool}
+                        onChange={(e) => setDsAuthorSchool(e.target.value)}
+                        placeholder="e.g. Raffles Institution"
+                        className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-productsans font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                        Student Country <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={dsAuthorCountry}
+                          onChange={(e) => setDsAuthorCountry(e.target.value)}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 appearance-none font-productsans font-medium cursor-pointer pr-7 truncate"
+                        >
+                          {COUNTRIES.map(c => (
+                            <option key={c.name} value={c.name}>{c.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
+                        Keywords / Tags
+                      </label>
+                      <input
+                        type="text"
+                        value={dsTags}
+                        onChange={(e) => setDsTags(e.target.value)}
+                        placeholder="Agriculture, STEM"
+                        className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-productsans font-medium"
+                      />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* CARD 4: Editorial Verification & Honor Check */}
+                <div className="bg-white rounded-2xl border border-emerald-500/20 shadow-2xs p-5 space-y-3 bg-gradient-to-b from-emerald-50/20 to-transparent">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider font-productsans">
+                      Editorial Verification & Intake Check
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2.5 pt-1">
+                    <label className="flex items-start gap-2.5 cursor-pointer text-xs text-gray-700 font-productsans leading-relaxed">
+                      <input
+                        type="checkbox"
+                        checked={dsPledgeOriginal}
+                        onChange={(e) => setDsPledgeOriginal(e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span>Original student manuscript received via offline intake / company mail.</span>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 cursor-pointer text-xs text-gray-700 font-productsans leading-relaxed">
+                      <input
+                        type="checkbox"
+                        checked={dsPledgeCite}
+                        onChange={(e) => setDsPledgeCite(e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span>Attributed statistics, quotations, and academic citations confirmed.</span>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 cursor-pointer text-xs text-gray-700 font-productsans leading-relaxed">
+                      <input
+                        type="checkbox"
+                        checked={dsPledgeGuidelines}
+                        onChange={(e) => setDsPledgeGuidelines(e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span>Complies with youth safety, scholastic decency, and editorial guidelines.</span>
+                    </label>
                   </div>
                 </div>
 
@@ -1970,21 +2188,42 @@ export default function AdminPanel({ currentUser, onRefreshFeed, siteStats }: Ad
 
             </div>
 
-            {/* Form Action Bar */}
-            <div className="flex items-center justify-between border-t border-stone-100 pt-5">
-              <span className="text-[10px] text-stone-400 font-sans">
-                * Uploading directly acts on behalf of the remote student author.
-              </span>
+            {/* BOTTOM ACTION BAR matching the student publication page buttons layout */}
+            <div className="mt-8 pt-6 border-t border-gray-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 font-productsans">
               
-              <button
-                type="submit"
-                disabled={dsSaving}
-                className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-semibold shadow hover:shadow-md active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50"
-              >
-                <span>{dsSaving ? 'Uploading Submission...' : 'Directly Publish Submission'}</span>
-                <Send className="w-3.5 h-3.5" />
-              </button>
+              {/* Left: Reset / Clear Form */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleResetDsForm}
+                  disabled={dsSaving}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl border border-gray-200 shadow-2xs transition-all active:scale-95 cursor-pointer font-productsans"
+                >
+                  <RotateCcw className="w-4 h-4 text-gray-500" />
+                  <span>Clear Form</span>
+                </button>
+              </div>
+
+              {/* Right: Submit Button */}
+              <div className="flex items-center gap-3 font-productsans">
+                <button
+                  type="submit"
+                  disabled={dsSaving}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-xl shadow-xs hover:shadow transition-all active:scale-95 cursor-pointer disabled:opacity-50 font-productsans"
+                >
+                  <span>
+                    {dsSaving 
+                      ? 'Uploading Intake...' 
+                      : dsStatus === 'Published' 
+                        ? 'Directly Publish Publication' 
+                        : 'Queue for Review'}
+                  </span>
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
             </div>
+
           </form>
         </motion.div>
       )}

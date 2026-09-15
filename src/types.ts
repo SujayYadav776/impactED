@@ -110,6 +110,8 @@ export interface Comment {
   createdAt: number;
   reportsCount: number;
   isHidden: boolean;
+  likesCount?: number;
+  likedBy?: string[];
 }
 
 export const CATEGORIES = [

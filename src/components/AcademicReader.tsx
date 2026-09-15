@@ -29,12 +29,18 @@ import {
   Bookmark,
   Check,
   Headphones,
-  Square
+  Square,
+  Printer,
+  Download
 } from 'lucide-react';
 import { Article, UserProfile, ReactionType, getStudentStats } from '../types';
 import CommentSection from './CommentSection';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import TextToSpeechPlayer from './TextToSpeechPlayer';
+import { downloadArticleAsPdf, printArticleAsPdf, exportArticleAsPdf } from '../utils/pdfExport';
+import DictionaryTooltip from './DictionaryTooltip';
+import ReadingRibbon from './ReadingRibbon';
+import DictionaryModal from './DictionaryModal';
 
 interface Annotation {
   id: string;
@@ -44,7 +50,12 @@ interface Annotation {
   color?: string; // yellow, green, blue, pink, purple, orange, black, white
 }
 
-function renderTextWithAnnotations(text: string, articleId: string, annotations: Annotation[]) {
+function renderTextWithAnnotations(
+  text: string, 
+  articleId: string, 
+  annotations: Annotation[],
+  onInspectHighlight?: (text: string, rect: DOMRect) => void
+) {
   const articleAnnotations = annotations.filter(ann => ann.articleId === articleId && text.includes(ann.text));
   if (articleAnnotations.length === 0) {
     return text;
@@ -145,7 +156,18 @@ function renderTextWithAnnotations(text: string, articleId: string, annotations:
     }
 
     return (
-      <span key={idx} className={className.trim()} title={styleTitle.trim()}>
+      <span 
+        key={idx} 
+        className={`${className.trim()} ${onInspectHighlight ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`} 
+        title={`${styleTitle.trim()} (Click to inspect dictionary definition)`}
+        onClick={(e) => {
+          if (onInspectHighlight) {
+            e.stopPropagation();
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            onInspectHighlight(seg.text, rect);
+          }
+        }}
+      >
         {seg.text}
       </span>
     );
@@ -196,6 +218,7 @@ export default function AcademicReader({
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
+      setIsPastHeader(false);
       if (articleContentRef.current) {
         articleContentRef.current.scrollTop = 0;
       }
@@ -238,9 +261,51 @@ export default function AcademicReader({
     tts.stop();
   }, [activeArticle.id]);
 
-  // Scroll Progress
+  // PDF Export & Download State & Action
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pdfExportSuccess, setPdfExportSuccess] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfDownloadSuccess, setPdfDownloadSuccess] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (isDownloadingPdf) return;
+    try {
+      setIsDownloadingPdf(true);
+      await downloadArticleAsPdf(activeArticle);
+      setPdfDownloadSuccess(true);
+      setTimeout(() => setPdfDownloadSuccess(false), 3500);
+    } catch (error) {
+      console.error('Failed to download article as PDF:', error);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const handlePrintPdf = async () => {
+    if (isExportingPdf) return;
+    try {
+      setIsExportingPdf(true);
+      await printArticleAsPdf(activeArticle);
+      setPdfExportSuccess(true);
+      setTimeout(() => setPdfExportSuccess(false), 3500);
+    } catch (error) {
+      console.error('Failed to print article as PDF:', error);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportPdf = handleDownloadPdf;
+
+  // Scroll Progress & Reading Ribbon state
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [isPastHeader, setIsPastHeader] = useState(false);
   const articleContentRef = useRef<HTMLDivElement>(null);
+  const articleHeaderRef = useRef<HTMLDivElement>(null);
+  const minimalistHeaderRef = useRef<HTMLDivElement>(null);
+
+  // Scholastic Lexicon Dictionary Modal state
+  const [isDictionaryModalOpen, setIsDictionaryModalOpen] = useState(false);
 
   // Annotation States
   const [annotations, setAnnotations] = useState<Annotation[]>(() => {
@@ -278,25 +343,47 @@ export default function AcademicReader({
     }
   }, [annotations, activeArticle.id]);
 
-  // Listen for document selection change to hide popover if selection is cleared
+  // Listen for document selection change to hide popover if selection is cleared outside tooltip
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
     const handleGlobalSelectionChange = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) {
-        setSelectionRange(null);
-      }
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) {
+          // If active focus is inside dictionary tooltip or user clicked on tooltip, preserve tooltip
+          const activeEl = document.activeElement;
+          if (!activeEl?.closest('.dictionary-tooltip-container')) {
+            setSelectionRange(null);
+          }
+        }
+      }, 180);
     };
 
     document.addEventListener('selectionchange', handleGlobalSelectionChange);
     return () => {
+      clearTimeout(timer);
       document.removeEventListener('selectionchange', handleGlobalSelectionChange);
     };
   }, []);
 
+  const handleInspectHighlight = (text: string, rect: DOMRect) => {
+    setSelectionRange({
+      text,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  };
+
   const handleTextSelection = (e: React.MouseEvent) => {
+    // If clicking inside dictionary tooltip, ignore
+    const target = e.target as HTMLElement;
+    if (target && target.closest('.dictionary-tooltip-container')) {
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
-      setSelectionRange(null);
       return;
     }
 
@@ -307,15 +394,17 @@ export default function AcademicReader({
     }
 
     try {
-      const range = selection.getRangeAt(0);
-      const rects = range.getClientRects();
-      if (rects.length > 0) {
-        const rect = rects[0];
-        setSelectionRange({
-          text: selectedText,
-          x: rect.left + rect.width / 2,
-          y: rect.top - 12,
-        });
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rects = range.getClientRects();
+        if (rects.length > 0) {
+          const rect = rects[0];
+          setSelectionRange({
+            text: selectedText,
+            x: rect.left + rect.width / 2,
+            y: rect.top,
+          });
+        }
       }
     } catch (err) {
       console.error("Error getting selection bounds:", err);
@@ -358,7 +447,7 @@ export default function AcademicReader({
   const activeSourcesRef = useRef<any[]>([]);
   const lfoNodeRef = useRef<OscillatorNode | null>(null);
 
-  // Handle Scroll Progress
+  // Handle Scroll Progress (Minimalist Mode)
   useEffect(() => {
     const handleScroll = () => {
       if (!articleContentRef.current) return;
@@ -367,6 +456,11 @@ export default function AcademicReader({
       if (totalHeight <= 0) return;
       const progress = (element.scrollTop / totalHeight) * 100;
       setScrollProgress(Math.min(100, Math.max(0, progress)));
+
+      if (minimalistHeaderRef.current) {
+        const rect = minimalistHeaderRef.current.getBoundingClientRect();
+        setIsPastHeader(rect.bottom <= 56);
+      }
 
       if (progress >= 88 && !hasCompleted) {
         setHasCompleted(true);
@@ -378,7 +472,7 @@ export default function AcademicReader({
 
     const container = articleContentRef.current;
     if (container) {
-      container.addEventListener('scroll', handleScroll);
+      container.addEventListener('scroll', handleScroll, { passive: true });
     }
     return () => {
       if (container) {
@@ -396,6 +490,12 @@ export default function AcademicReader({
       const progress = (window.scrollY / totalHeight) * 100;
       setScrollProgress(Math.min(100, Math.max(0, progress)));
 
+      if (articleHeaderRef.current) {
+        const rect = articleHeaderRef.current.getBoundingClientRect();
+        // Ribbon activates when scrolling past the article header
+        setIsPastHeader(rect.bottom <= 56);
+      }
+
       if (progress >= 88 && !hasCompleted) {
         setHasCompleted(true);
         if (onFinishReading) {
@@ -404,7 +504,8 @@ export default function AcademicReader({
       }
     };
 
-    window.addEventListener('scroll', handleWindowScroll);
+    handleWindowScroll();
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleWindowScroll);
   }, [isMinimalist, hasCompleted, activeArticle.id, onFinishReading]);
 
@@ -737,27 +838,27 @@ export default function AcademicReader({
       if (trimmed.startsWith('*') || trimmed.startsWith('-')) {
         return (
           <li key={idx} className={`text-inherit text-base ml-6 list-disc pl-1.5 mb-3 leading-relaxed ${spokenHighlightClasses}`}>
-            {renderTextWithAnnotations(trimmed.substring(1).trim(), activeArticle.id, annotations)}
+            {renderTextWithAnnotations(trimmed.substring(1).trim(), activeArticle.id, annotations, handleInspectHighlight)}
           </li>
         );
       }
       if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
         return (
           <p key={idx} className={`font-bold text-inherit text-md my-5 leading-relaxed ${spokenHighlightClasses}`}>
-            {renderTextWithAnnotations(trimmed.replace(/\*\*/g, '').trim(), activeArticle.id, annotations)}
+            {renderTextWithAnnotations(trimmed.replace(/\*\*/g, '').trim(), activeArticle.id, annotations, handleInspectHighlight)}
           </p>
         );
       }
       if (trimmed.startsWith('>')) {
         return (
           <blockquote key={idx} className={`border-l-4 border-amber-500 bg-amber-500/5 px-5 py-4 my-8 text-base italic leading-relaxed text-stone-600 dark:text-stone-300 ${spokenHighlightClasses}`}>
-            {renderTextWithAnnotations(trimmed.replace('>', '').trim(), activeArticle.id, annotations)}
+            {renderTextWithAnnotations(trimmed.replace('>', '').trim(), activeArticle.id, annotations, handleInspectHighlight)}
           </blockquote>
         );
       }
       return (
         <p key={idx} className={`text-base mb-6 leading-relaxed text-justify transition-all ${spokenHighlightClasses}`}>
-          {renderTextWithAnnotations(trimmed, activeArticle.id, annotations)}
+          {renderTextWithAnnotations(trimmed, activeArticle.id, annotations, handleInspectHighlight)}
         </p>
       );
     });
@@ -787,13 +888,57 @@ export default function AcademicReader({
   return (
     <div id="academic-study-workspace" className="min-h-screen flex flex-col">
       
-      {/* 1. SCROLL PROGRESS BAR */}
-      <div className="fixed top-0 left-0 right-0 h-1 bg-stone-200 z-[100]">
-        <div 
-          className="h-full bg-amber-600 transition-all duration-75"
-          style={{ width: `${scrollProgress}%` }}
-        />
-      </div>
+      {/* 1. SCROLL PROGRESS BAR (active when ribbon is hidden) */}
+      {!isPastHeader && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-stone-200 z-[100]">
+          <div 
+            className="h-full bg-amber-600 transition-all duration-75"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        </div>
+      )}
+
+      {/* 2. SLENDER GLASSMORPHIC READING RIBBON (activates when scrolling past article header) */}
+      <AnimatePresence>
+        {isPastHeader && (
+          <ReadingRibbon
+            article={activeArticle}
+            scrollProgress={scrollProgress}
+            onBack={onBack}
+            isDownloadingPdf={isDownloadingPdf}
+            pdfDownloadSuccess={pdfDownloadSuccess}
+            onDownloadPdf={handleDownloadPdf}
+            isExportingPdf={isExportingPdf}
+            pdfExportSuccess={pdfExportSuccess}
+            onExportPdf={handleDownloadPdf}
+            onPrintPdf={handlePrintPdf}
+            onOpenDictionary={() => setIsDictionaryModalOpen(true)}
+            tts={tts}
+            fullSpokenText={fullArticleSpokenText}
+            isBookmarked={isBookmarked}
+            onToggleBookmark={() => {
+              if (!currentUser) {
+                onOpenAuth();
+              } else {
+                onToggleBookmark?.(activeArticle.id);
+              }
+            }}
+            onScrollToTop={() => {
+              if (isMinimalist && articleContentRef.current) {
+                articleContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+              } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            onEnterFocusMode={!isMinimalist ? () => {
+              setIsMinimalist(true);
+              if (activeSound === 'none') {
+                handleSoundChange('rain');
+              }
+            } : undefined}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {isMinimalist ? (
@@ -889,6 +1034,30 @@ export default function AcademicReader({
                     </span>
                   </button>
                 )}
+
+                {/* Minimalist PDF Download Button */}
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                  className={`p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold ${
+                    pdfDownloadSuccess 
+                      ? 'text-emerald-600 font-bold' 
+                      : 'opacity-65 hover:opacity-100 hover:text-amber-700'
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+                  title="Download current manuscript directly as a .PDF file"
+                >
+                  {isDownloadingPdf ? (
+                    <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : pdfDownloadSuccess ? (
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Download className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                  )}
+                  <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-wider">
+                    {isDownloadingPdf ? 'Downloading...' : pdfDownloadSuccess ? 'Downloaded' : 'Download PDF'}
+                  </span>
+                </button>
 
                 {/* Custom Focus mask toggle */}
                 <button
@@ -1074,6 +1243,70 @@ export default function AcademicReader({
                           variant="sidebar"
                         />
 
+                        {/* 6. CLEAN PDF DOWNLOAD & PRINT */}
+                        <div className="space-y-2 pt-3 border-t border-inherit">
+                          <label className="font-mono text-[9px] uppercase font-bold tracking-wider text-stone-400">
+                            Archival Document
+                          </label>
+                          <div className="flex flex-col gap-1.5">
+                            <button
+                              type="button"
+                              onClick={handleDownloadPdf}
+                              disabled={isDownloadingPdf}
+                              className={`w-full py-2 px-3 rounded text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                                pdfDownloadSuccess
+                                  ? 'bg-emerald-600 text-white border border-emerald-700'
+                                  : 'bg-amber-600 text-white hover:bg-amber-700 border border-amber-700'
+                              } disabled:opacity-40 disabled:cursor-not-allowed`}
+                              title="Download manuscript directly as a .PDF file"
+                            >
+                              {isDownloadingPdf ? (
+                                <>
+                                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  <span>Generating PDF...</span>
+                                </>
+                              ) : pdfDownloadSuccess ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>PDF Downloaded!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>Download PDF</span>
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={handlePrintPdf}
+                              disabled={isExportingPdf}
+                              className="w-full py-1.5 px-3 rounded text-[11px] font-mono font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 text-stone-600 hover:text-stone-900 bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors cursor-pointer"
+                              title="Print manuscript or open system print dialog"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Print / System Dialog</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 7. SCHOLASTIC LEXICON / DICTIONARY */}
+                        <div className="space-y-2 pt-3 border-t border-inherit">
+                          <div className="flex items-center justify-between">
+                            <label className="font-mono text-[9px] uppercase font-bold tracking-wider text-stone-400 flex items-center gap-1.5">
+                              <BookOpen className="w-3.5 h-3.5 text-amber-500" />
+                              <span>Lexicon Active</span>
+                            </label>
+                            <span className="text-[8.5px] font-mono text-amber-600 dark:text-amber-400 font-bold bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/20">
+                              Highlight word
+                            </span>
+                          </div>
+                          <p className="text-[11px] opacity-70 leading-relaxed font-sans">
+                            Highlight or double-click any word in the manuscript to see its dictionary definition, phonetics, and speech pronunciation.
+                          </p>
+                        </div>
+
                       </div>
 
                       {/* Footer status */}
@@ -1134,7 +1367,7 @@ export default function AcademicReader({
                   </div>
 
                   {/* Header details */}
-                  <div className="space-y-4">
+                  <div ref={minimalistHeaderRef} className="space-y-4">
                     {activeArticle.status !== 'Published' && (
                       <div className="p-4 bg-amber-500/5 border border-amber-500/20 flex items-start gap-2.5 text-left text-xs text-amber-900 font-sans">
                         <span className="text-lg">🛡️</span>
@@ -1218,21 +1451,80 @@ export default function AcademicReader({
               </button>
 
               <div className="flex items-center gap-2">
+                {/* Direct Download PDF Action */}
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
+                  className={`px-2.5 sm:px-3 py-1.5 border flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                    pdfDownloadSuccess
+                      ? 'bg-emerald-50 border-emerald-600 text-emerald-800'
+                      : 'bg-white border-stone-300 text-stone-700 hover:text-amber-900 hover:bg-stone-50 hover:border-amber-600/60'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title="Download this manuscript directly as a .PDF file"
+                >
+                  {isDownloadingPdf ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-stone-400 border-t-amber-700 rounded-full animate-spin" />
+                      <span>Downloading PDF...</span>
+                    </>
+                  ) : pdfDownloadSuccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Downloaded!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5 text-amber-700" />
+                      <span className="hidden sm:inline">Download PDF</span>
+                      <span className="sm:hidden">Download</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Print / System PDF Action */}
+                <button
+                  type="button"
+                  onClick={handlePrintPdf}
+                  disabled={isExportingPdf}
+                  className="px-2 sm:px-2.5 py-1.5 border border-stone-300 bg-white hover:bg-stone-50 text-stone-600 hover:text-stone-900 flex items-center gap-1 text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="Print manuscript or open system print dialog"
+                >
+                  <Printer className="w-3.5 h-3.5 text-stone-500" />
+                  <span className="hidden md:inline">Print</span>
+                </button>
+
+                {/* Scholastic Lexicon / Dictionary Quick Action */}
+                <button
+                  type="button"
+                  onClick={() => setIsDictionaryModalOpen(true)}
+                  className="px-2.5 sm:px-3 py-1.5 border border-stone-300 text-stone-700 hover:text-amber-900 hover:bg-stone-50 hover:border-amber-600/60 bg-white flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="Search Scholastic Dictionary & Lexicon"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="hidden sm:inline">Dictionary</span>
+                </button>
+
                 {/* Bookmarking Button */}
-                {currentUser && (
-                  <button
-                    onClick={() => onToggleBookmark?.(activeArticle.id)}
-                    className={`px-2.5 sm:px-3 py-1.5 border flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                      isBookmarked
-                        ? 'bg-amber-50 border-amber-600 text-amber-900'
-                        : 'bg-white border-stone-300 text-stone-600 hover:text-stone-900 hover:bg-stone-50'
-                    }`}
-                  >
-                    <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current text-amber-700' : ''}`} />
-                    <span className="hidden sm:inline">{isBookmarked ? 'Saved to Reading List' : 'Bookmark Article'}</span>
-                    <span className="sm:hidden">{isBookmarked ? 'Saved' : 'Bookmark'}</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    if (!currentUser) {
+                      onOpenAuth();
+                    } else {
+                      onToggleBookmark?.(activeArticle.id);
+                    }
+                  }}
+                  className={`px-2.5 sm:px-3 py-1.5 border flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                    isBookmarked
+                      ? 'bg-amber-50 border-amber-600 text-amber-900'
+                      : 'bg-white border-stone-300 text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+                  }`}
+                  title={!currentUser ? "Sign in to save to your Reading List" : isBookmarked ? "Saved to Reading List" : "Bookmark Article"}
+                >
+                  <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current text-amber-700' : ''}`} />
+                  <span className="hidden sm:inline">{isBookmarked ? 'Saved to Reading List' : 'Bookmark Article'}</span>
+                  <span className="sm:hidden">{isBookmarked ? 'Saved' : 'Bookmark'}</span>
+                </button>
 
                 {/* Immersive Focus Mode Entrance Button */}
                 <button
@@ -1286,6 +1578,16 @@ export default function AcademicReader({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsDictionaryModalOpen(true)}
+                    className="hidden sm:flex items-center gap-1.5 text-stone-600 hover:text-amber-800 font-mono text-[11px] pr-2 border-r border-stone-200 transition-colors cursor-pointer"
+                    title="Open Scholastic Lexicon & Dictionary lookup"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Dictionary Lookup</span>
+                  </button>
+
                   {/* Mini Sound Selectors */}
                   <div className="flex rounded bg-stone-200 p-0.5">
                     {[
@@ -1326,7 +1628,7 @@ export default function AcademicReader({
               </div>
 
               {/* Title & Stats */}
-              <div className="p-6 sm:p-8 border-b border-[#d1cfc0]">
+              <div ref={articleHeaderRef} className="p-6 sm:p-8 border-b border-[#d1cfc0]">
                 <div className="flex flex-wrap items-center gap-4 text-xs text-stone-500 mb-4 font-mono font-medium">
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4 text-stone-400" />
@@ -1481,120 +1783,31 @@ export default function AcademicReader({
         )}
       </AnimatePresence>
 
-      {/* Floating Annotation Toolbar */}
+      {/* Floating Dictionary & Annotation Tooltip */}
       <AnimatePresence>
         {selectionRange && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            style={{
-              position: 'fixed',
-              left: `${selectionRange.x}px`,
-              top: `${selectionRange.y}px`,
-              transform: 'translate(-50%, -100%)',
+          <DictionaryTooltip
+            selectionRange={selectionRange}
+            onClose={() => {
+              setSelectionRange(null);
+              window.getSelection()?.removeAllRanges();
             }}
-            className="z-50 flex items-center gap-1.5 bg-stone-900 text-stone-100 p-2 shadow-2xl border border-stone-800 rounded-lg select-none"
-            onMouseDown={(e) => e.preventDefault()} // prevents focus loss and deselection
-          >
-            {/* Highlight circles */}
-            <div className="flex items-center gap-1 border-r border-stone-800 pr-1.5 mr-0.5">
-              {Object.entries({
-                yellow: 'bg-yellow-200 hover:bg-yellow-300',
-                green: 'bg-green-200 hover:bg-green-300',
-                blue: 'bg-blue-200 hover:bg-blue-300',
-                pink: 'bg-pink-200 hover:bg-pink-300',
-                purple: 'bg-purple-200 hover:bg-purple-300',
-                orange: 'bg-orange-200 hover:bg-orange-300',
-              }).map(([colorName, bgClass]) => (
-                <button
-                  key={colorName}
-                  onClick={() => handleAddAnnotation('highlight', colorName)}
-                  className={`w-4 h-4 rounded-full ${bgClass} border border-black/10 hover:scale-110 active:scale-95 transition-all cursor-pointer`}
-                  title={`Highlight ${colorName}`}
-                />
-              ))}
-            </div>
-
-            {/* Underline Toggle */}
-            <button
-              onClick={() => handleAddAnnotation('underline')}
-              className="p-1 text-stone-300 hover:text-white rounded hover:bg-stone-800 transition-colors cursor-pointer text-xs flex items-center gap-1 font-mono font-bold"
-              title="Underline selection"
-            >
-              <span className="underline decoration-2 underline-offset-2">U</span>
-            </button>
-
-            {/* Curly Underline Toggle */}
-            <button
-              onClick={() => handleAddAnnotation('curly-underline')}
-              className="p-1 text-amber-500 hover:text-amber-400 rounded hover:bg-stone-800 transition-colors cursor-pointer text-xs flex items-center gap-1 font-mono font-bold"
-              title="Curly (Wavy) Underline selection"
-            >
-              <span className="underline decoration-wavy decoration-2 underline-offset-2">~</span>
-            </button>
-
-            {/* Italic Toggle */}
-            <button
-              onClick={() => handleAddAnnotation('italic')}
-              className="p-1.5 text-stone-300 hover:text-white rounded hover:bg-stone-800 transition-colors cursor-pointer text-xs flex items-center gap-1 font-serif italic font-bold"
-              title="Italic selection"
-            >
-              <span>I</span>
-            </button>
-
-            <div className="w-px h-4 bg-stone-800" />
-
-            {/* Text Color Options */}
-            <div className="flex items-center gap-1 pl-1 pr-1">
-              <button
-                onClick={() => handleAddAnnotation('text-color', 'black')}
-                className="w-5 h-5 flex items-center justify-center rounded bg-stone-100 text-stone-900 border border-stone-700 hover:scale-110 active:scale-95 transition-all cursor-pointer font-bold font-mono text-[10px]"
-                title="Black Text Color"
-              >
-                A
-              </button>
-              <button
-                onClick={() => handleAddAnnotation('text-color', 'white')}
-                className="w-5 h-5 flex items-center justify-center rounded bg-stone-900 text-stone-100 border border-stone-700 hover:scale-110 active:scale-95 transition-all cursor-pointer font-bold font-mono text-[10px]"
-                title="White Text Color"
-              >
-                A
-              </button>
-            </div>
-
-            <div className="w-px h-4 bg-stone-800" />
-
-            {/* Read Aloud / Listen Selection */}
-            {tts.isSupported && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    tts.speakSnippet(selectionRange.text);
-                    setSelectionRange(null);
-                  }}
-                  className="p-1 text-emerald-400 hover:text-white rounded hover:bg-stone-800 transition-colors cursor-pointer text-xs flex items-center gap-1 font-mono font-bold"
-                  title="Listen to this selected passage aloud (Web Speech TTS)"
-                >
-                  <Headphones className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-[10px] hidden sm:inline">Listen</span>
-                </button>
-                <div className="w-px h-4 bg-stone-800" />
-              </>
-            )}
-
-            {/* Clear selection / annotations on this text */}
-            <button
-              onClick={handleClearAnnotation}
-              className="p-1 text-stone-400 hover:text-red-400 rounded hover:bg-stone-800 transition-colors cursor-pointer text-[10px] font-mono font-bold uppercase"
-              title="Clear Highlights/Underline on this text"
-            >
-              Clear
-            </button>
-          </motion.div>
+            onAddAnnotation={handleAddAnnotation}
+            onClearAnnotation={handleClearAnnotation}
+            onListenPhrase={(text) => {
+              tts.speakSnippet(text);
+              setSelectionRange(null);
+            }}
+            isTtsSupported={tts.isSupported}
+          />
         )}
       </AnimatePresence>
+
+      {/* Scholastic Lexicon & Dictionary Modal */}
+      <DictionaryModal
+        isOpen={isDictionaryModalOpen}
+        onClose={() => setIsDictionaryModalOpen(false)}
+      />
 
     </div>
   );

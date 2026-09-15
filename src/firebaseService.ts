@@ -266,7 +266,9 @@ const SAMPLE_COMMENTS: Comment[] = [
     content: 'This is an excellent writeup. The "Quantum Divide" is something I had not considered. It reminds me of the inequality in vaccine distribution or access to green energy technologies.',
     createdAt: Date.now() - 4 * 24 * 3600 * 1000,
     reportsCount: 0,
-    isHidden: false
+    isHidden: false,
+    likesCount: 5,
+    likedBy: ['auth-2', 'auth-3', 'auth-4', 'auth-5', 'auth-6']
   },
   {
     id: 'com-2',
@@ -278,7 +280,9 @@ const SAMPLE_COMMENTS: Comment[] = [
     content: 'Very well structured! Quantum cryptography is currently being researched a lot in our school science club. It is scary but exciting.',
     createdAt: Date.now() - 3 * 24 * 3600 * 1000,
     reportsCount: 0,
-    isHidden: false
+    isHidden: false,
+    likesCount: 2,
+    likedBy: ['auth-1', 'auth-3']
   },
   {
     id: 'com-3',
@@ -290,7 +294,9 @@ const SAMPLE_COMMENTS: Comment[] = [
     content: 'The second stanza is so beautiful! "A cool coin of silver on a child\'s forehead." I can almost smell the petrichor (dry soil drinking rain). Amazing work Aarav!',
     createdAt: Date.now() - 2 * 24 * 3600 * 1000,
     reportsCount: 0,
-    isHidden: false
+    isHidden: false,
+    likesCount: 4,
+    likedBy: ['auth-1', 'auth-2', 'auth-4', 'auth-5']
   },
   {
     id: 'com-4',
@@ -302,7 +308,9 @@ const SAMPLE_COMMENTS: Comment[] = [
     content: 'Fantastic results. 80% decrease is huge! We are trying to do something similar here, but it is hard to convince the food vendors. I will share your audit idea with our student union.',
     createdAt: Date.now() - 1 * 24 * 3600 * 1000,
     reportsCount: 0,
-    isHidden: false
+    isHidden: false,
+    likesCount: 3,
+    likedBy: ['auth-1', 'auth-2', 'auth-5']
   }
 ];
 
@@ -406,12 +414,23 @@ class LocalStorageDatabase {
 
   async getComments(articleId: string): Promise<Comment[]> {
     const coms = this.getStore('comments');
-    return coms.filter(c => c.articleId === articleId && !c.isHidden);
+    return coms
+      .filter(c => c.articleId === articleId && !c.isHidden)
+      .map(c => ({
+        ...c,
+        likesCount: typeof c.likesCount === 'number' ? c.likesCount : (Array.isArray(c.likedBy) ? c.likedBy.length : 0),
+        likedBy: Array.isArray(c.likedBy) ? c.likedBy : []
+      }));
   }
 
   async saveComment(comment: Comment): Promise<void> {
     const coms = this.getStore('comments');
-    coms.push(comment);
+    const commentWithLikes: Comment = {
+      ...comment,
+      likesCount: comment.likesCount || 0,
+      likedBy: comment.likedBy || []
+    };
+    coms.push(commentWithLikes);
     this.setStore('comments', coms);
 
     // Update comment count on article
@@ -421,6 +440,30 @@ class LocalStorageDatabase {
       arts[idx].commentsCount = (arts[idx].commentsCount || 0) + 1;
       this.setStore('articles', arts);
     }
+  }
+
+  async toggleCommentLike(commentId: string, userId: string): Promise<{ liked: boolean; likesCount: number }> {
+    const coms = this.getStore('comments');
+    const idx = coms.findIndex(c => c.id === commentId);
+    if (idx >= 0) {
+      const comment = coms[idx];
+      const likedBy = Array.isArray(comment.likedBy) ? [...comment.likedBy] : [];
+      const userIdx = likedBy.indexOf(userId);
+      let liked = false;
+      if (userIdx >= 0) {
+        likedBy.splice(userIdx, 1);
+        liked = false;
+      } else {
+        likedBy.push(userId);
+        liked = true;
+      }
+      comment.likedBy = likedBy;
+      comment.likesCount = likedBy.length;
+      coms[idx] = comment;
+      this.setStore('comments', coms);
+      return { liked, likesCount: comment.likesCount };
+    }
+    return { liked: false, likesCount: 0 };
   }
 
   async getProfile(uid: string): Promise<UserProfile | null> {
@@ -740,7 +783,12 @@ export const firebaseService = {
         querySnapshot.forEach((docSnap) => {
           const c = docSnap.data() as Comment;
           if (!c.isHidden) {
-            comments.push({ id: docSnap.id, ...c });
+            comments.push({ 
+              id: docSnap.id, 
+              ...c,
+              likesCount: typeof c.likesCount === 'number' ? c.likesCount : (Array.isArray(c.likedBy) ? c.likedBy.length : 0),
+              likedBy: Array.isArray(c.likedBy) ? c.likedBy : []
+            });
           }
         });
         // Sort newest first
@@ -757,12 +805,17 @@ export const firebaseService = {
   },
 
   async addComment(comment: Comment): Promise<void> {
+    const commentToSave: Comment = {
+      ...comment,
+      likesCount: comment.likesCount || 0,
+      likedBy: comment.likedBy || []
+    };
     if (isFirebaseAvailable) {
       try {
-        await setDoc(doc(db, 'comments', comment.id), comment);
+        await setDoc(doc(db, 'comments', commentToSave.id), commentToSave);
         
         // Update commentsCount on article
-        const artRef = doc(db, 'articles', comment.articleId);
+        const artRef = doc(db, 'articles', commentToSave.articleId);
         const artSnap = await getDoc(artRef);
         if (artSnap.exists()) {
           const art = artSnap.data() as Article;
@@ -770,18 +823,51 @@ export const firebaseService = {
             commentsCount: (art.commentsCount || 0) + 1
           });
         }
-        await localDB.saveComment(comment);
+        await localDB.saveComment(commentToSave);
         return;
       } catch (err) {
         if (isNetworkOrUnavailableError(err)) {
           console.warn("Firestore offline on addComment, falling back to local storage.");
-          await localDB.saveComment(comment);
+          await localDB.saveComment(commentToSave);
           return;
         }
-        handleFirestoreError(err, OperationType.WRITE, `comments/${comment.id}`);
+        handleFirestoreError(err, OperationType.WRITE, `comments/${commentToSave.id}`);
       }
     }
-    await localDB.saveComment(comment);
+    await localDB.saveComment(commentToSave);
+  },
+
+  async toggleCommentLike(commentId: string, userId: string): Promise<{ liked: boolean; likesCount: number }> {
+    if (isFirebaseAvailable) {
+      try {
+        const comRef = doc(db, 'comments', commentId);
+        const comSnap = await getDoc(comRef);
+        if (comSnap.exists()) {
+          const com = comSnap.data() as Comment;
+          const likedBy = Array.isArray(com.likedBy) ? [...com.likedBy] : [];
+          const userIdx = likedBy.indexOf(userId);
+          let liked = false;
+          if (userIdx >= 0) {
+            likedBy.splice(userIdx, 1);
+            liked = false;
+          } else {
+            likedBy.push(userId);
+            liked = true;
+          }
+          const likesCount = likedBy.length;
+          await updateDoc(comRef, { likedBy, likesCount });
+          await localDB.toggleCommentLike(commentId, userId);
+          return { liked, likesCount };
+        }
+      } catch (err) {
+        if (isNetworkOrUnavailableError(err)) {
+          console.warn("Firestore offline on toggleCommentLike, falling back to local storage.");
+          return localDB.toggleCommentLike(commentId, userId);
+        }
+        handleFirestoreError(err, OperationType.WRITE, `comments/${commentId}`);
+      }
+    }
+    return localDB.toggleCommentLike(commentId, userId);
   },
 
   async reportComment(commentId: string): Promise<void> {

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Article, CATEGORIES, UserProfile } from '../types';
 import { firebaseService } from '../firebaseService';
+import { calculateReadingTime, DEFAULT_WORDS_PER_MINUTE } from '../utils/readingTime';
 import { 
   Upload, 
   Image as ImageIcon, 
@@ -97,16 +98,13 @@ export default function ArticleEditor({
     }, 6000);
   };
 
-  // Word count & Reading time estimators
-  const getWordCount = () => {
-    if (!content.trim()) return 0;
-    return content.trim().split(/\s+/).filter(Boolean).length;
-  };
-  
-  const getReadingTime = () => {
-    const words = getWordCount();
-    return Math.max(1, Math.ceil(words / 150));
-  };
+  // Real-time Reading Time & Word Count Utility calculation as student writes
+  const readingStats = useMemo(() => {
+    return calculateReadingTime(content, DEFAULT_WORDS_PER_MINUTE);
+  }, [content]);
+
+  const getWordCount = () => readingStats.wordCount;
+  const getReadingTime = () => readingStats.minutes;
 
   const compressAndSetImage = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -479,21 +477,29 @@ export default function ArticleEditor({
 
               {/* Manuscript Body Content */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider font-productsans">
                     Full Manuscript Content <span className="text-rose-500">*</span>
                   </label>
-                  <div className="flex items-center gap-3 text-xs text-gray-500 font-productsans">
-                    <span>Words: <strong className="text-gray-800">{getWordCount()}</strong></span>
-                    <span>•</span>
-                    <span>Est: <strong className="text-gray-800">{getReadingTime()} min read</strong></span>
+                  <div className="flex items-center gap-2.5 text-xs font-productsans">
+                    {/* Live Reading Time Utility Pill */}
+                    <div 
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/70 font-medium text-xs shadow-2xs transition-all"
+                      title={`Estimated based on ${readingStats.wordCount} words at ~${DEFAULT_WORDS_PER_MINUTE} words/min`}
+                    >
+                      <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>{readingStats.displayString}</span>
+                      <span className="text-emerald-300">•</span>
+                      <span className="font-semibold text-emerald-900">{readingStats.wordCount.toLocaleString()} {readingStats.wordCount === 1 ? 'word' : 'words'}</span>
+                    </div>
+
                     {saveStatus === 'saved' && (
-                      <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                      <span className="inline-flex items-center gap-1 text-emerald-600 font-medium text-xs">
                         <Check className="w-3 h-3" /> Autosaved
                       </span>
                     )}
                     {saveStatus === 'saving' && (
-                      <span className="text-gray-400">Saving...</span>
+                      <span className="text-gray-400 text-xs">Saving...</span>
                     )}
                   </div>
                 </div>
@@ -505,9 +511,17 @@ export default function ArticleEditor({
                   rows={13}
                   className="w-full bg-white border border-gray-200 rounded-xl p-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all font-productsans leading-relaxed resize-y min-h-[260px]"
                 />
-                <p className="text-[11px] text-gray-400 mt-1.5 font-productsans">
-                  Markdown supported: Use # for main headers, ## for subheadings, **bold**, and *lists.
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400 mt-2 font-productsans">
+                  <span>Markdown supported: Use # for headers, ## for subheadings, **bold**, and *lists.</span>
+                  <div className="flex items-center gap-2 text-gray-500 font-medium">
+                    <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50/60 px-2 py-0.5 rounded border border-emerald-100">
+                      <Clock className="w-3 h-3 text-emerald-600" />
+                      <span>{readingStats.readCategory}</span>
+                    </span>
+                    <span>•</span>
+                    <span>Est: <strong className="text-gray-700 font-semibold">{readingStats.minutes} {readingStats.minutes === 1 ? 'min' : 'mins'} ({readingStats.seconds}s total)</strong></span>
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -727,14 +741,19 @@ export default function ArticleEditor({
               {/* Grid with 2 inputs: Reading Time & Target Level */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 font-productsans">
-                    Reading Time
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider font-productsans">
+                      Reading Time
+                    </label>
+                    <span className="text-[10px] text-emerald-700 font-medium font-productsans">
+                      {readingStats.wordCount} words
+                    </span>
+                  </div>
                   <div className="relative">
                     <input
                       type="text"
                       readOnly
-                      value={`${getReadingTime()} Mins`}
+                      value={readingStats.wordCount > 0 ? `${readingStats.minutes} ${readingStats.minutes === 1 ? 'Min' : 'Mins'} (~${readingStats.seconds}s)` : '0 Mins'}
                       className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-productsans font-medium"
                     />
                   </div>

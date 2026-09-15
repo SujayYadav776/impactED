@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Caveat:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Lora:ital,wght@0,400..700;1,400..700&family=Outfit:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Playfair Display", serif;
@@ -10,6 +12,7 @@
   --font-minimal: "Outfit", "Inter", sans-serif;
   --font-mono: "Outfit", monospace;
   --font-productsans: "Product Sans", "Outfit", "Inter", sans-serif;
+  --font-space: "Space Grotesk", sans-serif;
 
   /* Custom earth-tone brown palette overrides based on attached image palette */
   --color-emerald-50: #fdf6ee;
@@ -40,9 +43,41 @@
 body {
   background-color: #fdfcf0;
   color: #1a1a1a;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Chalkboard and Chalk Text Styling */
+.dark body {
+  background-color: #141210;
+  color: #eee9df;
+}
+
+/* Notebook Paper Style */
+.notebook-paper {
+  background-color: #fcfbf7;
+  line-height: 24px;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.dark .notebook-paper {
+  background-color: #1c1916;
+  color: #eee9df;
+}
+
+/* Academic Manuscript Paper Styling for comfortable night reading */
+.dark .academic-notebook-paper {
+  background-color: #1a1714 !important;
+  color: #eee9df !important;
+}
+
+.dark .academic-notebook-paper p {
+  color: #e5e0d5 !important;
+}
+
+.dark .academic-notebook-paper h1,
+.dark .academic-notebook-paper h2,
+.dark .academic-notebook-paper h3 {
+  color: #fcfbf7 !important;
+}
 .chalkboard-texture {
   background: radial-gradient(circle, #3a2214 0%, #24130a 65%, #120803 100%);
   position: relative;
@@ -105,12 +140,21 @@ body {
   background: #f1f1f1;
   border-radius: 4px;
 }
+.dark ::-webkit-scrollbar-track {
+  background: #191613;
+}
 ::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #3b332b;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1a1;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52473c;
 }
 
 /* Grade Stamp Effect */
@@ -122,4 +166,46 @@ body {
   transform: rotate(-12deg);
   border-radius: 8px;
   box-shadow: 0 0 0 3px transparent;
+}
+
+/* Print-Friendly Stylesheet for Scholastic PDF Export */
+@media print {
+  header,
+  nav,
+  button,
+  .print-hidden,
+  .fixed,
+  .annotation-toolbar,
+  #greenboard-header {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    font-size: 11pt !important;
+  }
+
+  #academic-study-workspace {
+    min-height: auto !important;
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+  }
+
+  /* Remove shadows, borders and expand content when printing */
+  .shadow-xs,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-2xl {
+    box-shadow: none !important;
+  }
+
+  .border {
+    border-color: #e5e5e5 !important;
+  }
+
+  a[href]:after {
+    content: "" !important;
+  }
 }

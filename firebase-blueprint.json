@@ -41,7 +41,9 @@
         "content": { "type": "string" },
         "createdAt": { "type": "number" },
         "reportsCount": { "type": "integer" },
-        "isHidden": { "type": "boolean" }
+        "isHidden": { "type": "boolean" },
+        "likesCount": { "type": "integer" },
+        "likedBy": { "type": "array" }
       },
       "required": ["id", "articleId", "authorId", "authorName", "content", "createdAt"]
     },

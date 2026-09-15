@@ -67,14 +67,14 @@ export default function ArticleCard({
         className="h-full flex flex-col"
       >
         <article 
-          className="bg-white rounded-xl border border-stone-300/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_28px_-6px_rgba(82,54,36,0.12)] overflow-hidden flex flex-col justify-between h-full group transition-all duration-300"
+          className="bg-white dark:bg-[#1a1714] rounded-xl border border-stone-300/80 dark:border-[#383129] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.3)] hover:shadow-[0_12px_28px_-6px_rgba(82,54,36,0.12)] dark:hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col justify-between h-full group transition-all duration-300"
         >
       
       {/* Clickable Card Body wrapper */}
       <div className="cursor-pointer" onClick={() => onSelect(article.id)}>
         
         {/* Cover Image */}
-        <div className="relative aspect-[16/10] overflow-hidden bg-stone-100 border-b border-stone-200">
+        <div className="relative aspect-[16/10] overflow-hidden bg-stone-100 dark:bg-[#141210] border-b border-stone-200 dark:border-[#383129]">
           <img 
             src={article.coverImage || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80'} 
             alt={article.title}
@@ -114,7 +114,7 @@ export default function ArticleCard({
               className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md shadow-md border transition-all hover:scale-110 active:scale-95 cursor-pointer z-10 ${
                 isBookmarked
                   ? 'bg-emerald-600 border-emerald-600 text-white'
-                  : 'bg-white/80 dark:bg-stone-900/80 border-stone-300/50 text-stone-700 hover:text-stone-950 hover:bg-white'
+                  : 'bg-white/80 dark:bg-stone-900/80 border-stone-300/50 dark:border-stone-700 text-stone-700 dark:text-stone-200 hover:text-stone-950 dark:hover:text-white hover:bg-white dark:hover:bg-stone-900'
               }`}
               title={isBookmarked ? "Saved in Reading List" : "Bookmark Article"}
             >
@@ -128,46 +128,46 @@ export default function ArticleCard({
         <div className="p-5 flex-1 flex flex-col justify-between">
           <div>
             {/* Metadata */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500 font-sans mb-3 font-medium">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500 dark:text-stone-400 font-sans mb-3 font-medium">
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 {formatDate(article.createdAt)}
               </span>
-              <span className="w-1 h-1 bg-stone-300 rounded-full" />
-              <span className="flex items-center gap-1 font-bold text-emerald-800 uppercase text-[10px] tracking-wide">
-                <Globe className="w-3 h-3 text-emerald-700" />
+              <span className="w-1 h-1 bg-stone-300 dark:bg-stone-600 rounded-full" />
+              <span className="flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-400 uppercase text-[10px] tracking-wide">
+                <Globe className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
                 {article.authorCountry}
               </span>
             </div>
 
             {article.status !== 'Published' && (
-              <div className="mb-3 px-2.5 py-1.5 bg-amber-500/5 border border-amber-500/20 text-[10px] text-amber-800 font-medium font-sans">
+              <div className="mb-3 px-2.5 py-1.5 bg-amber-500/5 border border-amber-500/20 text-[10px] text-amber-800 dark:text-amber-300 font-medium font-sans">
                 🛡️ <span className="font-bold">Author Preview Only:</span> This submission is private and only visible to you and platform moderators.
               </div>
             )}
 
             {/* Title */}
-            <h3 className="font-productsans font-bold text-xl text-stone-900 line-clamp-2 leading-tight group-hover:text-emerald-800 transition-colors mb-2.5">
+            <h3 className="font-productsans font-bold text-xl text-stone-900 dark:text-[#eee9df] line-clamp-2 leading-tight group-hover:text-emerald-800 dark:group-hover:text-amber-300 transition-colors mb-2.5">
               {article.title}
             </h3>
 
             {/* Summary description */}
-            <p className="text-stone-600 text-xs sm:text-sm line-clamp-3 leading-relaxed mb-4 font-serif">
+            <p className="text-stone-600 dark:text-[#b5ac9d] text-xs sm:text-sm line-clamp-3 leading-relaxed mb-4 font-serif">
               {article.summary}
             </p>
           </div>
 
           {/* Tags & Metrics Row */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-3 mt-auto">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 dark:border-[#383129] pt-3 mt-auto">
             <div className="flex flex-wrap gap-1">
               {article.tags.map(tag => (
-                <span key={tag} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded border border-stone-200 font-mono font-medium">
+                <span key={tag} className="text-[10px] bg-stone-100 dark:bg-[#25201b] text-stone-600 dark:text-[#b5ac9d] px-2 py-0.5 rounded border border-stone-200 dark:border-[#383129] font-mono font-medium">
                   #{tag}
                 </span>
               ))}
             </div>
             
-            <span className="text-[9px] text-stone-400 font-mono bg-stone-50 border border-stone-200/50 px-2 py-0.5 rounded">
+            <span className="text-[9px] text-stone-400 dark:text-stone-500 font-mono bg-stone-50 dark:bg-[#141210] border border-stone-200/50 dark:border-[#383129] px-2 py-0.5 rounded">
               {article.wordCount || 0} words • {article.readingTime || 1} min read
             </span>
           </div>
@@ -177,19 +177,19 @@ export default function ArticleCard({
       </div>
 
       {/* Footer containing Author details and Reaction Stamps */}
-      <div className="px-5 py-4 bg-[#fdfcf0]/40 border-t border-stone-200 flex items-center justify-between">
+      <div className="px-5 py-4 bg-[#fdfcf0]/40 dark:bg-[#161311] border-t border-stone-200 dark:border-[#383129] flex items-center justify-between">
         
         {/* Author Bio/Credits */}
         <div className="flex items-center gap-2">
           {/* Small school initials badge */}
-          <div className="w-7 h-7 bg-emerald-500/10 text-emerald-900 border border-emerald-500/20 rounded flex items-center justify-center font-bold text-[10px] font-display">
+          <div className="w-7 h-7 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-500/30 rounded flex items-center justify-center font-bold text-[10px] font-display">
             {article.authorName.charAt(0)}
           </div>
           <div className="flex flex-col text-left">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-bold text-stone-800 leading-none">{article.authorName}</span>
+              <span className="text-xs font-bold text-stone-800 dark:text-[#eee9df] leading-none">{article.authorName}</span>
             </div>
-            <span className="text-[9px] text-stone-500 line-clamp-1 mt-0.5 max-w-[140px] font-sans">{article.authorSchool}</span>
+            <span className="text-[9px] text-stone-500 dark:text-stone-400 line-clamp-1 mt-0.5 max-w-[140px] font-sans">{article.authorSchool}</span>
           </div>
         </div>
 
@@ -197,15 +197,15 @@ export default function ArticleCard({
         <div className="flex items-center gap-3">
           
           {/* Comments Count */}
-          <div className="flex items-center gap-1 text-slate-500 text-xs font-semibold" title={`${article.commentsCount || 0} comments`}>
-            <MessageSquare className="w-3.5 h-3.5 text-stone-400" />
+          <div className="flex items-center gap-1 text-slate-500 dark:text-stone-400 text-xs font-semibold" title={`${article.commentsCount || 0} comments`}>
+            <MessageSquare className="w-3.5 h-3.5 text-stone-400 dark:text-stone-500" />
             <span>{article.commentsCount || 0}</span>
           </div>
 
           {/* Reactions Total Badge */}
           {totalReactions > 0 && (
-            <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">
-              <Sparkles className="w-3 h-3 text-emerald-600 animate-pulse" />
+            <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
+              <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400 animate-pulse" />
               <span>{totalReactions} reacts</span>
             </div>
           )}

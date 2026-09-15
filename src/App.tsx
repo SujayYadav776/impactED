@@ -15,6 +15,7 @@ import AcademicDashboard from './components/AcademicDashboard';
 import ReadingStreakTracker from './components/ReadingStreakTracker';
 import AcademicReader from './components/AcademicReader';
 import HangingTeamCards from './components/HangingTeamCards';
+import ThemeToggle from './components/ThemeToggle';
 import Loader from './components/Loader';
 // @ts-ignore
 import emptyLibraryImg from './assets/images/empty_library_1783953130670.jpg';
@@ -499,7 +500,7 @@ Begin with a clear research question that addresses an impactful issue in your l
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfcf0] text-[#1a1a1a] font-sans flex flex-col justify-between">
+    <div className="min-h-screen bg-[#fdfcf0] dark:bg-[#141210] text-[#1a1a1a] dark:text-[#eee9df] font-sans flex flex-col justify-between transition-colors duration-250">
       
       {/* GLOBAL ACADEMIC NAVBAR */}
       <header 
@@ -548,6 +549,9 @@ Begin with a clear research question that addresses an impactful issue in your l
               finishReadingTrigger={finishReadingTrigger}
               onExploreLibrary={() => scrollToLibrary()}
             />
+
+            {/* Global Theme Toggle (Paper Theme vs Night-time Reading) */}
+            <ThemeToggle variant="pill" />
 
             <button
               onClick={() => scrollToLibrary()}
@@ -643,8 +647,10 @@ Begin with a clear research question that addresses an impactful issue in your l
 
           </div>
 
-          {/* Mobile Streak & 3-Dot Options Trigger */}
+          {/* Mobile Streak, Theme & 3-Dot Options Trigger */}
           <div className="md:hidden flex items-center gap-1.5">
+            <ThemeToggle variant="compact" />
+
             <ReadingStreakTracker 
               currentUser={currentUser}
               selectedArticleId={selectedArticleId}
@@ -742,6 +748,11 @@ Begin with a clear research question that addresses an impactful issue in your l
                       </button>
                     </div>
                   )}
+
+                  {/* Reading Mode / Theme Toggle for Drawer */}
+                  <div className="pt-1">
+                    <ThemeToggle variant="drawer" />
+                  </div>
 
                   {/* Reading Streak Tracker */}
                   <div className="pt-1" id="header-streak-badge-mobile">
@@ -952,6 +963,7 @@ Begin with a clear research question that addresses an impactful issue in your l
                       selectedCountry={selectedCountry} 
                       onSelectCountry={setSelectedCountry} 
                       articles={articles}
+                      onSelectArticle={(art) => handleSelectArticle(art.id)}
                     />
                   </div>
 
@@ -959,17 +971,17 @@ Begin with a clear research question that addresses an impactful issue in your l
                   <div id="library-section" className="order-1 md:order-2 px-4 sm:px-6 lg:px-10 xl:px-12 space-y-6">
                     
                     {/* Filter bar card */}
-                    <div className="bg-white rounded border border-[#d1cfc0] p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
+                    <div className="bg-white dark:bg-[#1c1814] rounded border border-[#d1cfc0] dark:border-[#3b332b] p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
                       
                       {/* Search query box */}
                       <div className="relative w-full md:max-w-md">
-                        <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400" />
+                        <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400 dark:text-stone-500" />
                         <input
                           type="text"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder="Search essays, poems, student authors, or keywords..."
-                          className="w-full bg-stone-50/60 border border-[#d1cfc0] rounded pl-10 pr-4 py-2.5 text-xs focus:ring-1 focus:ring-emerald-800 shadow-inner text-[#1a1a1a]"
+                          className="w-full bg-stone-50/60 dark:bg-[#141210] border border-[#d1cfc0] dark:border-[#3b332b] rounded pl-10 pr-4 py-2.5 text-xs focus:ring-1 focus:ring-emerald-800 dark:focus:ring-amber-500 shadow-inner text-[#1a1a1a] dark:text-[#eee9df] placeholder:text-stone-400 dark:placeholder:text-stone-500"
                         />
                       </div>
 
@@ -977,7 +989,7 @@ Begin with a clear research question that addresses an impactful issue in your l
                       {(selectedCategory || selectedCountry || searchQuery) && (
                         <button
                           onClick={() => { setSelectedCategory(''); setSelectedCountry(''); setSearchQuery(''); }}
-                          className="text-stone-500 text-xs hover:text-emerald-800 font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                          className="text-stone-500 dark:text-stone-400 text-xs hover:text-emerald-800 dark:hover:text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           <span>Clear Filters</span>
@@ -988,15 +1000,15 @@ Begin with a clear research question that addresses an impactful issue in your l
 
                     {/* Active Filtering indicators */}
                     {(selectedCountry || selectedCategory) && (
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 font-sans uppercase tracking-wider">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-stone-400 font-sans uppercase tracking-wider">
                         <span>Currently filtering:</span>
                         {selectedCategory && (
-                          <span className="px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-none font-bold">
+                          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-300 rounded-none font-bold">
                             Subject: {selectedCategory}
                           </span>
                         )}
                         {selectedCountry && (
-                          <span className="px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-none font-bold">
+                          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-300 rounded-none font-bold">
                             Region: {selectedCountry}
                           </span>
                         )}
@@ -1033,7 +1045,7 @@ Begin with a clear research question that addresses an impactful issue in your l
                               type="button"
                               onClick={() => setIsMobileLibraryExpanded(!isMobileLibraryExpanded)}
                               style={{ paddingTop: '11px', marginLeft: '1px', marginTop: '-30px' }}
-                              className="px-5 pb-2.5 bg-white border border-[#d1cfc0] hover:border-emerald-700 text-[#1a1a1a] hover:text-emerald-900 text-xs font-mono font-bold uppercase tracking-wider rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+                              className="px-5 pb-2.5 bg-white dark:bg-[#1c1814] border border-[#d1cfc0] dark:border-[#3b332b] hover:border-emerald-700 dark:hover:border-amber-500 text-[#1a1a1a] dark:text-[#eee9df] hover:text-emerald-900 dark:hover:text-amber-300 text-xs font-mono font-bold uppercase tracking-wider rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                             >
                               <span>
                                 {isMobileLibraryExpanded 
@@ -1041,17 +1053,17 @@ Begin with a clear research question that addresses an impactful issue in your l
                                   : `View More Articles (${filteredArticles.length - 3} More)`}
                               </span>
                               {isMobileLibraryExpanded ? (
-                                <ChevronUp className="w-4 h-4 text-emerald-800" />
+                                <ChevronUp className="w-4 h-4 text-emerald-800 dark:text-amber-400" />
                               ) : (
-                                <ChevronDown className="w-4 h-4 text-emerald-800" />
+                                <ChevronDown className="w-4 h-4 text-emerald-800 dark:text-amber-400" />
                               )}
                             </button>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="text-center py-12 px-6 bg-white rounded-none border border-[#d1cfc0] flex flex-col items-center justify-center space-y-4">
-                        <div className="w-48 h-48 rounded-full overflow-hidden border border-[#d1cfc0]/60 bg-[#fdfcf0] p-1 shadow-inner relative group">
+                      <div className="text-center py-12 px-6 bg-white dark:bg-[#1c1814] rounded-none border border-[#d1cfc0] dark:border-[#3b332b] flex flex-col items-center justify-center space-y-4">
+                        <div className="w-48 h-48 rounded-full overflow-hidden border border-[#d1cfc0]/60 dark:border-[#3b332b] bg-[#fdfcf0] dark:bg-[#141210] p-1 shadow-inner relative group">
                           <img 
                             src={emptyLibraryImg} 
                             alt="No Publications Found" 
@@ -1060,8 +1072,8 @@ Begin with a clear research question that addresses an impactful issue in your l
                           />
                         </div>
                         <div className="space-y-1 max-w-sm">
-                          <h4 className="font-display font-bold text-[#1a1a1a] text-lg">No Student Publications Found</h4>
-                          <p className="text-stone-500 text-xs leading-relaxed">
+                          <h4 className="font-display font-bold text-[#1a1a1a] dark:text-[#eee9df] text-lg">No Student Publications Found</h4>
+                          <p className="text-stone-500 dark:text-stone-400 text-xs leading-relaxed">
                             Try adjusting your filters, clearing your search query, or checking another participating region.
                           </p>
                         </div>
@@ -1073,21 +1085,21 @@ Begin with a clear research question that addresses an impactful issue in your l
 
                 {/* Meet Our Team Section */}
                 <div className="pt-8 pb-12 px-4 sm:px-6 lg:px-10 xl:px-12">
-                  <div className="bg-[#fdfcf0]/40 rounded-3xl border border-[#d1cfc0]/70 p-8 md:p-12 shadow-xs overflow-visible">
+                  <div className="bg-[#fdfcf0]/40 dark:bg-[#1c1814]/80 rounded-3xl border border-[#d1cfc0]/70 dark:border-[#3b332b] p-8 md:p-12 shadow-xs overflow-visible">
                     <div className="text-center max-w-xl mx-auto mb-4">
-                      <h3 className="font-display font-black text-3xl text-stone-900 tracking-tight flex items-center justify-center gap-2">
-                        <Users className="w-7 h-7 text-emerald-800" />
+                      <h3 className="font-display font-black text-3xl text-stone-900 dark:text-[#eee9df] tracking-tight flex items-center justify-center gap-2">
+                        <Users className="w-7 h-7 text-emerald-800 dark:text-amber-400" />
                         Meet Our Team
                       </h3>
-                      <p className="text-xs text-stone-500 font-serif italic mt-2">
+                      <p className="text-xs text-stone-500 dark:text-stone-400 font-serif italic mt-2">
                         Dedicated educators and academic curators guiding the voices of tomorrow's scholarship.
                       </p>
                     </div>
 
                     {adminsLoading ? (
                       <div className="text-center py-16">
-                        <div className="w-8 h-8 border-3 border-emerald-800 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                        <span className="text-xs text-stone-500 font-mono tracking-wider">Retrieving editorial board members...</span>
+                        <div className="w-8 h-8 border-3 border-emerald-800 dark:border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                        <span className="text-xs text-stone-500 dark:text-stone-400 font-mono tracking-wider">Retrieving editorial board members...</span>
                       </div>
                     ) : (
                       <div className="overflow-visible">
@@ -1106,26 +1118,26 @@ Begin with a clear research question that addresses an impactful issue in your l
       </main>
 
       {/* GLOBAL ACADEMIC FOOTER */}
-      <footer className="bg-[#fdfcf0] text-stone-700 border-t border-[#d1cfc0] font-sans mt-auto">
+      <footer className="bg-[#fdfcf0] dark:bg-[#12100e] text-stone-700 dark:text-stone-300 border-t border-[#d1cfc0] dark:border-[#3b332b] font-sans mt-auto transition-colors">
         {!loading && (
-          <div className="py-12 px-6 sm:px-10 lg:px-12 border-b border-[#d1cfc0]">
+          <div className="py-12 px-6 sm:px-10 lg:px-12 border-b border-[#d1cfc0] dark:border-[#3b332b]">
             <div className="w-full max-w-7xl lg:max-w-none mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
               
               <div className="space-y-3">
-                <h4 className="text-[#1a1a1a] font-display italic font-bold text-lg">The Scholastic Archive</h4>
-                <p className="text-xs leading-relaxed text-stone-600 max-w-xs">
+                <h4 className="text-[#1a1a1a] dark:text-[#eee9df] font-display italic font-bold text-lg">The Scholastic Archive</h4>
+                <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-400 max-w-xs">
                   Continuous academic learning, global community bonds, and peer-moderated student voices. Fusing the infinite pursuit of truth with real student papers.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-[#1a1a1a] font-sans uppercase tracking-widest font-bold text-xs">Academic Categories</h4>
-                <ul className="text-xs space-y-1.5 grid grid-cols-2">
+                <h4 className="text-[#1a1a1a] dark:text-[#eee9df] font-sans uppercase tracking-widest font-bold text-xs">Academic Categories</h4>
+                <ul className="text-xs space-y-1.5 grid grid-cols-2 text-stone-600 dark:text-stone-400">
                   {CATEGORIES.map(cat => (
                     <li key={cat}>
                       <button 
                         onClick={() => scrollToLibrary(cat)}
-                        className="hover:text-emerald-800 font-medium transition-colors cursor-pointer text-left"
+                        className="hover:text-emerald-800 dark:hover:text-amber-300 font-medium transition-colors cursor-pointer text-left"
                       >
                         {cat}
                       </button>
@@ -1135,16 +1147,16 @@ Begin with a clear research question that addresses an impactful issue in your l
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-[#1a1a1a] font-sans uppercase tracking-widest font-bold text-xs">Honor & Guidelines</h4>
-                <ul className="text-xs space-y-1.5">
-                  <li><span className="text-[10px] bg-emerald-500/10 text-emerald-900 border border-emerald-500/20 px-2 py-0.5 rounded uppercase font-semibold">Under 18 Safe Platform</span></li>
-                  <li><span className="hover:text-emerald-800 font-medium cursor-pointer">Community Honor Code Guidelines</span></li>
-                  <li><span className="hover:text-emerald-800 font-medium cursor-pointer">Privacy Policy & Children's safety</span></li>
+                <h4 className="text-[#1a1a1a] dark:text-[#eee9df] font-sans uppercase tracking-widest font-bold text-xs">Honor & Guidelines</h4>
+                <ul className="text-xs space-y-1.5 text-stone-600 dark:text-stone-400">
+                  <li><span className="text-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-500/40 px-2 py-0.5 rounded uppercase font-semibold">Under 18 Safe Platform</span></li>
+                  <li><span className="hover:text-emerald-800 dark:hover:text-amber-300 font-medium cursor-pointer">Community Honor Code Guidelines</span></li>
+                  <li><span className="hover:text-emerald-800 dark:hover:text-amber-300 font-medium cursor-pointer">Privacy Policy & Children's safety</span></li>
                 </ul>
                 <div className="pt-2">
                   <button
                     onClick={() => scrollToLibrary()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#523624] hover:bg-[#3d2517] text-[#fcdcb6] rounded text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#523624] dark:bg-[#382417] hover:bg-[#3d2517] text-[#fcdcb6] rounded text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer border border-[#fcdcb6]/20"
                   >
                     <span>↑ Jump to Article Feed</span>
                   </button>
@@ -1155,21 +1167,21 @@ Begin with a clear research question that addresses an impactful issue in your l
           </div>
         )}
 
-        <div className={`w-full max-w-7xl lg:max-w-none mx-auto ${loading ? 'py-4' : 'py-6'} px-6 sm:px-10 lg:px-12 text-center text-[11px] text-stone-500 font-sans flex flex-col sm:flex-row items-center justify-between gap-4`}>
+        <div className={`w-full max-w-7xl lg:max-w-none mx-auto ${loading ? 'py-4' : 'py-6'} px-6 sm:px-10 lg:px-12 text-center text-[11px] text-stone-500 dark:text-stone-400 font-sans flex flex-col sm:flex-row items-center justify-between gap-4`}>
           <div className="flex flex-col sm:flex-row items-center gap-2">
             <p>© 2026 impactED Student Publishing Group. All student authors retain full publication ownership of their articles.</p>
-            <span className="hidden sm:inline text-stone-300">•</span>
+            <span className="hidden sm:inline text-stone-300 dark:text-stone-600">•</span>
             <a 
               href="https://impactedglobal.xyz" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-[#523624] hover:text-stone-900 font-bold underline underline-offset-2 transition-colors"
+              className="text-[#523624] dark:text-[#fcdcb6] hover:text-stone-900 dark:hover:text-amber-200 font-bold underline underline-offset-2 transition-colors"
             >
               impactedglobal.xyz ↗
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[9px] uppercase tracking-wider bg-stone-100 px-2 py-0.5 border border-[#d1cfc0]">Est. 2024</span>
+            <span className="font-mono text-[9px] uppercase tracking-wider bg-stone-100 dark:bg-[#1e1b18] px-2 py-0.5 border border-[#d1cfc0] dark:border-[#3b332b] text-stone-600 dark:text-stone-400">Est. 2024</span>
             <p className="font-mono text-[9px]">PROJECT ID: peta-watch-85jvd (Firestore Active)</p>
           </div>
         </div>
