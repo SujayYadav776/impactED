@@ -38,13 +38,13 @@ export default function ArticleCard({
   // Category specific pastel color pairings
   const getCategoryColor = (cat: string) => {
     switch (cat) {
-      case 'Science & Tech': return 'bg-emerald-100 text-emerald-900 border-emerald-300';
-      case 'Poetry & Creative Writing': return 'bg-rose-100 text-rose-900 border-rose-300';
-      case 'Opinion & Editorial': return 'bg-[#1a1a1a] text-[#fdfcf0] border-[#1a1a1a]';
-      case 'Arts & Culture': return 'bg-purple-100 text-purple-900 border-purple-300';
-      case 'Global Issues': return 'bg-blue-100 text-blue-900 border-blue-300';
-      case 'Campus Life': return 'bg-teal-100 text-teal-900 border-teal-300';
-      default: return 'bg-stone-100 text-stone-800 border-stone-300';
+      case 'Science & Tech': return 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60';
+      case 'Poetry & Creative Writing': return 'bg-rose-100 dark:bg-rose-950/80 text-rose-900 dark:text-rose-300 border-rose-300 dark:border-rose-700/60';
+      case 'Opinion & Editorial': return 'bg-[#1a1a1a] dark:bg-[#382f28] text-[#fdfcf0] dark:text-[#fcdcb6] border-[#1a1a1a] dark:border-[#524438]';
+      case 'Arts & Culture': return 'bg-purple-100 dark:bg-purple-950/80 text-purple-900 dark:text-purple-300 border-purple-300 dark:border-purple-700/60';
+      case 'Global Issues': return 'bg-blue-100 dark:bg-blue-950/80 text-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-700/60';
+      case 'Campus Life': return 'bg-teal-100 dark:bg-teal-950/80 text-teal-900 dark:text-teal-300 border-teal-300 dark:border-teal-700/60';
+      default: return 'bg-stone-100 dark:bg-[#25201b] text-stone-800 dark:text-stone-300 border-stone-300 dark:border-[#423930]';
     }
   };
 
@@ -89,12 +89,12 @@ export default function ArticleCard({
             {article.status !== 'Published' && (
               <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border shadow-md font-mono ${
                 article.status === 'Draft' 
-                  ? 'bg-stone-100 text-stone-700 border-stone-300' 
+                  ? 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-300 dark:border-stone-600' 
                   : article.status === 'Submitted'
-                  ? 'bg-blue-100 text-blue-900 border-blue-300 animate-pulse'
+                  ? 'bg-blue-100 dark:bg-blue-950/80 text-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-700 animate-pulse'
                   : article.status === 'Revision Requested'
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-red-100 text-red-900 border-red-300'
+                  ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                  : 'bg-red-100 dark:bg-red-950/80 text-red-900 dark:text-red-300 border-red-300 dark:border-red-700'
               }`}>
                 {article.status === 'Draft' && '📝 Draft'}
                 {article.status === 'Submitted' && '🕒 Under Review'}

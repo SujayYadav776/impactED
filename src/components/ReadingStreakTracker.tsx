@@ -164,30 +164,30 @@ export default function ReadingStreakTracker({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.97 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 mt-2 w-76 max-w-[calc(100vw-24px)] bg-stone-50 border border-stone-200 shadow-xl rounded-2xl z-50 overflow-hidden text-left"
+            className="absolute right-0 mt-2 w-76 max-w-[calc(100vw-24px)] bg-stone-50 dark:bg-[#1c1814] border border-stone-200 dark:border-[#383129] shadow-xl rounded-2xl z-50 overflow-hidden text-left"
           >
             {/* Header (CSS selector 1) */}
-            <div className="px-3.5 py-3 border-b border-stone-200/80 flex items-center justify-between bg-white">
+            <div className="px-3.5 py-3 border-b border-stone-200/80 dark:border-[#383129] flex items-center justify-between bg-white dark:bg-[#231e1a]">
               <div className="flex items-center gap-2">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                  activeToday ? 'bg-amber-100 text-amber-700' : 'bg-stone-200/70 text-stone-400'
+                  activeToday ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400' : 'bg-stone-200/70 dark:bg-stone-800 text-stone-400'
                 }`}>
-                  <Flame className={`w-3.5 h-3.5 ${activeToday ? 'fill-amber-500 text-amber-600' : 'text-stone-400'}`} />
+                  <Flame className={`w-3.5 h-3.5 ${activeToday ? 'fill-amber-500 text-amber-600 dark:text-amber-400' : 'text-stone-400'}`} />
                 </div>
-                <span className="font-space font-bold text-xs tracking-tight text-stone-900">Reading Streak</span>
+                <span className="font-space font-bold text-xs tracking-tight text-stone-900 dark:text-[#eee9df]">Reading Streak</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={`text-[10px] font-space font-bold px-2 py-0.5 rounded-full border ${
                   activeToday 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60' 
+                    : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
                 }`}>
                   {activeToday ? 'Active' : 'Pending'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowPopover(false)}
-                  className="p-1 text-stone-400 hover:text-stone-700 rounded transition-colors cursor-pointer"
+                  className="p-1 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded transition-colors cursor-pointer"
                   title="Close streak tracker"
                   aria-label="Close streak tracker"
                 >
@@ -200,26 +200,26 @@ export default function ReadingStreakTracker({
             <div className="p-3 space-y-2.5 font-space">
               
               {/* Card 1: Main Metric & Record */}
-              <div className="bg-white rounded-xl p-3 border border-stone-200/80 shadow-2xs">
+              <div className="bg-white dark:bg-[#231e1a] rounded-xl p-3 border border-stone-200/80 dark:border-[#383129] shadow-2xs">
                 <div className="flex items-baseline justify-between">
                   <div>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="font-space text-3xl font-extrabold text-stone-900 tracking-tight">
+                      <span className="font-space text-3xl font-extrabold text-stone-900 dark:text-[#eee9df] tracking-tight">
                         {currentStreak}
                       </span>
-                      <span className="font-space text-xs text-stone-600 font-semibold">
+                      <span className="font-space text-xs text-stone-600 dark:text-stone-300 font-semibold">
                         {currentStreak === 1 ? 'day streak' : 'days streak'}
                       </span>
                     </div>
-                    <p className="text-[11px] font-space text-stone-500 mt-0.5 font-normal">
+                    <p className="text-[11px] font-space text-stone-500 dark:text-stone-400 mt-0.5 font-normal">
                       {activeToday ? 'Goal completed for today' : 'Read any article to extend'}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-[9px] font-space uppercase tracking-wider text-stone-400 block font-bold">
+                    <span className="text-[9px] font-space uppercase tracking-wider text-stone-400 dark:text-stone-500 block font-bold">
                       Personal Best
                     </span>
-                    <span className="text-xs font-space font-bold text-stone-800">
+                    <span className="text-xs font-space font-bold text-stone-800 dark:text-[#eee9df]">
                       {longestStreak} {longestStreak === 1 ? 'day' : 'days'}
                     </span>
                   </div>
@@ -227,10 +227,10 @@ export default function ReadingStreakTracker({
               </div>
 
               {/* Card 2: 7-Day Activity Matrix */}
-              <div className="bg-white rounded-xl p-3 border border-stone-200/80 shadow-2xs">
-                <div className="flex items-center justify-between text-[10px] font-space text-stone-400 mb-2">
-                  <span className="uppercase tracking-wider text-[9px] font-bold text-stone-500">Last 7 Days</span>
-                  <span className="text-stone-700 font-bold text-[10px]">
+              <div className="bg-white dark:bg-[#231e1a] rounded-xl p-3 border border-stone-200/80 dark:border-[#383129] shadow-2xs">
+                <div className="flex items-center justify-between text-[10px] font-space text-stone-400 dark:text-stone-400 mb-2">
+                  <span className="uppercase tracking-wider text-[9px] font-bold text-stone-500 dark:text-stone-400">Last 7 Days</span>
+                  <span className="text-stone-700 dark:text-stone-300 font-bold text-[10px]">
                     {last7Days.filter(d => d.hasRead).length}/7 active
                   </span>
                 </div>
@@ -239,7 +239,7 @@ export default function ReadingStreakTracker({
                   {last7Days.map((day, idx) => (
                     <div key={idx} className="flex flex-col items-center gap-1">
                       <span className={`text-[9px] font-space font-medium ${
-                        day.isToday ? 'font-bold text-amber-800' : 'text-stone-400'
+                        day.isToday ? 'font-bold text-amber-800 dark:text-amber-300' : 'text-stone-400 dark:text-stone-500'
                       }`}>
                         {day.dayName.slice(0, 2)}
                       </span>
@@ -249,8 +249,8 @@ export default function ReadingStreakTracker({
                           day.hasRead
                             ? 'bg-amber-600 text-white font-bold shadow-2xs'
                             : day.isToday
-                              ? 'border-2 border-dashed border-amber-500 bg-amber-50/60 text-amber-700'
-                              : 'bg-stone-100 text-stone-300'
+                              ? 'border-2 border-dashed border-amber-500 bg-amber-50/60 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
+                              : 'bg-stone-100 dark:bg-[#2d2721] text-stone-300 dark:text-stone-600'
                         }`}
                       >
                         {day.hasRead ? (
@@ -258,11 +258,11 @@ export default function ReadingStreakTracker({
                         ) : day.isToday ? (
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                         ) : (
-                          <span className="w-1 h-1 rounded-full bg-stone-300" />
+                          <span className="w-1 h-1 rounded-full bg-stone-300 dark:bg-stone-600" />
                         )}
                       </div>
                       <span className={`text-[8.5px] font-space ${
-                        day.isToday ? 'font-bold text-amber-900' : 'text-stone-400'
+                        day.isToday ? 'font-bold text-amber-900 dark:text-amber-200' : 'text-stone-400 dark:text-stone-500'
                       }`}>
                         {day.dayNumber}
                       </span>
@@ -272,8 +272,8 @@ export default function ReadingStreakTracker({
               </div>
 
               {/* Card 3: Status & Action Footer Card */}
-              <div className="bg-white rounded-xl px-3 py-2 border border-stone-200/80 shadow-2xs flex items-center justify-between text-[11px]">
-                <span className="text-[10px] font-space font-medium text-stone-500">
+              <div className="bg-white dark:bg-[#231e1a] rounded-xl px-3 py-2 border border-stone-200/80 dark:border-[#383129] shadow-2xs flex items-center justify-between text-[11px]">
+                <span className="text-[10px] font-space font-medium text-stone-500 dark:text-stone-400">
                   {activeToday ? 'Streak secured today' : 'Auto-updates on read'}
                 </span>
                 {!activeToday && onExploreLibrary ? (
@@ -283,13 +283,13 @@ export default function ReadingStreakTracker({
                       setShowPopover(false);
                       onExploreLibrary();
                     }}
-                    className="inline-flex items-center gap-1 text-amber-800 hover:text-amber-950 font-bold font-space text-xs cursor-pointer hover:underline"
+                    className="inline-flex items-center gap-1 text-amber-800 dark:text-amber-300 hover:text-amber-950 dark:hover:text-amber-100 font-bold font-space text-xs cursor-pointer hover:underline"
                   >
                     <span>Read now</span>
                     <ArrowRight className="w-3 h-3" />
                   </button>
                 ) : (
-                  <span className="text-emerald-700 text-[10.5px] font-space font-semibold flex items-center gap-1">
+                  <span className="text-emerald-700 dark:text-emerald-400 text-[10.5px] font-space font-semibold flex items-center gap-1">
                     <Check className="w-3 h-3 stroke-[2]" /> All set
                   </span>
                 )}

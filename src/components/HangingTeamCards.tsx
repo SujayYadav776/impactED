@@ -123,7 +123,7 @@ export default function HangingTeamCards({ adminProfiles }: HangingTeamCardsProp
               {/* Oval Metal D-Ring Loop */}
               <div className="w-10 h-6 border-[3px] border-stone-400 rounded-b-full bg-gradient-to-b from-stone-300 via-stone-400 to-stone-500 shadow-md relative flex items-center justify-center">
                 {/* D-ring Inner void space */}
-                <div className="w-[28px] h-[14px] bg-[#fdfcf0] rounded-b-full absolute top-0 border-t border-stone-500" />
+                <div className="w-[28px] h-[14px] bg-[#fdfcf0] dark:bg-[#1a1714] rounded-b-full absolute top-0 border-t border-stone-500 transition-colors" />
                 {/* Metal Highlights */}
                 <div className="absolute inset-0 w-full h-[1.5px] bg-white/50 top-[1px] rounded-full" />
               </div>

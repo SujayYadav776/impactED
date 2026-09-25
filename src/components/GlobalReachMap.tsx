@@ -586,9 +586,9 @@ export default function GlobalReachMap({ selectedCountry, onSelectCountry, artic
             {/* TAB CONTENT: GLOBAL EXCHANGE */}
             {activeHubTab === 'exchange' && (
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-[10.5px] text-stone-500 font-serif pb-1">
+                <div className="flex items-center justify-between text-[10.5px] text-stone-500 dark:text-stone-400 font-serif pb-1">
                   <span>Cross-continental student research partnerships tackling shared global inquiries.</span>
-                  <span className="font-mono text-[9px] text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-xs">
+                  <span className="font-mono text-[9px] text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-xs">
                     INTER_CHAPTER_COLLAB
                   </span>
                 </div>
@@ -597,24 +597,24 @@ export default function GlobalReachMap({ selectedCountry, onSelectCountry, artic
                   {crossBorderTracks.map((track) => (
                     <div
                       key={track.id}
-                      className="p-3 bg-white border border-stone-200 hover:border-stone-400 transition-all rounded-none"
+                      className="p-3 bg-white dark:bg-[#1c1916] border border-stone-200 dark:border-[#383129] hover:border-stone-400 dark:hover:border-stone-600 transition-all rounded-none"
                     >
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className="text-xs font-serif font-bold text-stone-900">
+                        <h4 className="text-xs font-serif font-bold text-stone-900 dark:text-[#eee9df]">
                           {track.title}
                         </h4>
-                        <span className="text-[9px] font-mono px-1.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 font-bold shrink-0">
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 font-bold shrink-0">
                           {track.status}
                         </span>
                       </div>
-                      <p className="text-[11px] text-stone-600 font-serif leading-relaxed mb-2">
+                      <p className="text-[11px] text-stone-600 dark:text-stone-300 font-serif leading-relaxed mb-2">
                         {track.hypothesis}
                       </p>
-                      <div className="flex items-center justify-between pt-2 border-t border-stone-100 text-[9.5px]">
-                        <span className="font-mono text-stone-500">
-                          Chapters: <strong className="text-stone-800 font-sans">{track.partners}</strong>
+                      <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-[#2d2720] text-[9.5px]">
+                        <span className="font-mono text-stone-500 dark:text-stone-400">
+                          Chapters: <strong className="text-stone-800 dark:text-stone-200 font-sans">{track.partners}</strong>
                         </span>
-                        <span className="text-emerald-700 font-mono font-semibold">
+                        <span className="text-emerald-700 dark:text-emerald-400 font-mono font-semibold">
                           OPEN COLLABORATION
                         </span>
                       </div>
@@ -626,18 +626,18 @@ export default function GlobalReachMap({ selectedCountry, onSelectCountry, artic
           </div>
 
           {/* Institutional Integrity Footer */}
-          <div className="mt-4 pt-3 border-t border-[#d1cfc0]/70 flex flex-wrap items-center justify-between text-[9px] font-mono text-stone-400 gap-2 select-none">
+          <div className="mt-4 pt-3 border-t border-[#d1cfc0]/70 dark:border-[#383129] flex flex-wrap items-center justify-between text-[9px] font-mono text-stone-400 dark:text-stone-400 gap-2 select-none">
             <div className="flex items-center gap-2.5">
-              <span className="flex items-center gap-1 text-emerald-700 font-bold">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-bold">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 PEER_REVIEW: AUDITED
               </span>
-              <span className="text-stone-300">|</span>
-              <span>HUMAN_AUTHORED: 100%</span>
-              <span className="text-stone-300 hidden sm:inline">|</span>
-              <span className="hidden sm:inline">OPEN_ACCESS: CC-BY-NC 4.0</span>
+              <span className="text-stone-300 dark:text-stone-600">|</span>
+              <span className="text-stone-400 dark:text-stone-400">HUMAN_AUTHORED: 100%</span>
+              <span className="text-stone-300 dark:text-stone-600 hidden sm:inline">|</span>
+              <span className="hidden sm:inline text-stone-400 dark:text-stone-400">OPEN_ACCESS: CC-BY-NC 4.0</span>
             </div>
-            <span className="text-stone-500 font-bold">TELEMETRY_REFRESH: LIVE</span>
+            <span className="text-stone-500 dark:text-stone-400 font-bold">TELEMETRY_REFRESH: LIVE</span>
           </div>
 
         </div>

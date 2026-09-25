@@ -3,6 +3,7 @@ import { ArrowRight, Heart, Award, BookOpen, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Article } from '../types';
 import SpecularButton from './SpecularButton';
+import { useTheme } from '../context/ThemeContext';
 // @ts-ignore
 import scholarlyChallengesImg from '../assets/images/scholarly_challenges_1783955263991.jpg';
 
@@ -17,6 +18,8 @@ export default function GreenboardHero({
   onSelectArticle = () => {},
   onWriteEssay = () => {}
 }: GreenboardHeroProps) {
+  const { isDark } = useTheme();
+
   // Compute real dynamic statistics from existing articles
   const publishedArticles = articles.filter(a => a.status === 'Published');
   const totalPublishedCount = publishedArticles.length;
@@ -46,9 +49,11 @@ export default function GreenboardHero({
 
   return (
     <div 
-      className="relative overflow-hidden bg-[#fdfcf0] py-16 px-4 sm:px-6 lg:px-8 select-none"
+      className="relative overflow-hidden bg-[#fdfcf0] dark:bg-[#141210] py-16 px-4 sm:px-6 lg:px-8 select-none transition-colors duration-300"
       style={{
-        background: 'radial-gradient(circle at 50% 30%, rgba(82, 54, 36, 0.06) 0%, rgba(58, 33, 19, 0.25) 45%, rgba(38, 19, 10, 0.52) 75%, rgba(22, 11, 5, 0.72) 100%)'
+        background: isDark
+          ? 'radial-gradient(circle at 50% 30%, rgba(82, 54, 36, 0.28) 0%, rgba(58, 33, 19, 0.48) 45%, rgba(26, 14, 7, 0.88) 75%, rgba(18, 9, 4, 0.98) 100%)'
+          : 'radial-gradient(circle at 50% 30%, rgba(82, 54, 36, 0.06) 0%, rgba(58, 33, 19, 0.25) 45%, rgba(38, 19, 10, 0.52) 75%, rgba(22, 11, 5, 0.72) 100%)'
       }}
     >
       {/* Dynamic Fading Grid overlay: colored warm espresso lines that fade near center and seamlessly fade out at the bottom */}
@@ -63,8 +68,8 @@ export default function GreenboardHero({
           className="w-full h-full"
           style={{
             backgroundImage: `
-              linear-gradient(to right, rgba(61, 37, 23, 0.38) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(61, 37, 23, 0.38) 1px, transparent 1px)
+              linear-gradient(to right, ${isDark ? 'rgba(252, 220, 182, 0.12)' : 'rgba(61, 37, 23, 0.38)'} 1px, transparent 1px),
+              linear-gradient(to bottom, ${isDark ? 'rgba(252, 220, 182, 0.12)' : 'rgba(61, 37, 23, 0.38)'} 1px, transparent 1px)
             `,
             backgroundSize: '36px 36px',
             maskImage: 'radial-gradient(ellipse at 50% 30%, transparent 12%, rgba(0, 0, 0, 0.25) 38%, black 60%, rgba(0, 0, 0, 0.8) 75%, transparent 100%)',
@@ -79,12 +84,12 @@ export default function GreenboardHero({
 
       {/* Centered Main Hero Text Area */}
       <div className="max-w-4xl mx-auto text-center space-y-6 relative z-20 mb-10 lg:mb-4">
-        <h1 className="text-[32px] sm:text-[43px] lg:text-[43px] font-display font-medium text-[#111111] tracking-tight leading-[47.2px] max-w-3xl mx-auto">
+        <h1 className="text-[32px] sm:text-[43px] lg:text-[43px] font-display font-medium text-[#111111] dark:text-[#f7f4ee] tracking-tight leading-[47.2px] max-w-3xl mx-auto transition-colors">
           A global student-led initiative collecting <br className="hidden sm:inline" />
-          <span className="font-serif italic font-normal text-[#111111]">authentic, unfiltered stories</span> from learners around the world.
+          <span className="font-serif italic font-normal text-[#111111] dark:text-[#fcdcb6] transition-colors">authentic, unfiltered stories</span> from learners around the world.
         </h1>
         
-        <p className="text-stone-600 font-sans text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+        <p className="text-stone-600 dark:text-[#d6cec2] font-sans text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed transition-colors">
           impactED is a youth-led global education initiative turning lived educational experiences and discrepancies into meaningful reformations.
         </p>
 
@@ -270,19 +275,19 @@ export default function GreenboardHero({
               onClick={onWriteEssay}
               className="flex flex-col group cursor-pointer"
             >
-              <div className="bg-[#f2e6d8] rounded-2xl p-5 flex flex-col justify-between h-[190px] shadow-xs text-center border border-[#e2d6c8]">
+              <div className="bg-[#f2e6d8] dark:bg-[#231b14] rounded-2xl p-5 flex flex-col justify-between h-[190px] shadow-xs text-center border border-[#e2d6c8] dark:border-[#3d2e24] transition-colors">
                 <div className="my-auto">
-                  <h4 className="text-[#141414] text-[16px] font-productsans font-bold leading-snug">
+                  <h4 className="text-[#141414] dark:text-[#fcdcb6] text-[16px] font-productsans font-bold leading-snug transition-colors">
                     Join {uniqueScholarsCount} <br /> Active Scholars
                   </h4>
-                  <p className="text-[10px] text-stone-600 font-productsans mt-1">
+                  <p className="text-[10px] text-stone-600 dark:text-[#c4bbb0] font-productsans mt-1 transition-colors">
                     Share research, exchange peer feedback, and earn recognition.
                   </p>
                 </div>
                 
-                <div className="flex items-center justify-between border-t border-stone-400/20 pt-3">
-                  <span className="text-[10px] text-stone-700 font-bold uppercase tracking-wider font-productsans">Write blog</span>
-                  <div className="w-7 h-7 rounded-full bg-[#141414] flex items-center justify-center text-white hover:scale-110 transition-transform">
+                <div className="flex items-center justify-between border-t border-stone-400/20 dark:border-white/10 pt-3">
+                  <span className="text-[10px] text-stone-700 dark:text-[#ded6c7] font-bold uppercase tracking-wider font-productsans transition-colors">Write blog</span>
+                  <div className="w-7 h-7 rounded-full bg-[#141414] dark:bg-[#fcdcb6] flex items-center justify-center text-white dark:text-[#141414] hover:scale-110 transition-transform">
                     <ArrowRight className="w-4 h-4 -rotate-45" />
                   </div>
                 </div>

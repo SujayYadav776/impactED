@@ -17,6 +17,7 @@ import AcademicReader from './components/AcademicReader';
 import HangingTeamCards from './components/HangingTeamCards';
 import ThemeToggle from './components/ThemeToggle';
 import Loader from './components/Loader';
+import EditorialFooter from './components/EditorialFooter';
 // @ts-ignore
 import emptyLibraryImg from './assets/images/empty_library_1783953130670.jpg';
 // @ts-ignore
@@ -1117,75 +1118,12 @@ Begin with a clear research question that addresses an impactful issue in your l
 
       </main>
 
-      {/* GLOBAL ACADEMIC FOOTER */}
-      <footer className="bg-[#fdfcf0] dark:bg-[#12100e] text-stone-700 dark:text-stone-300 border-t border-[#d1cfc0] dark:border-[#3b332b] font-sans mt-auto transition-colors">
-        {!loading && (
-          <div className="py-12 px-6 sm:px-10 lg:px-12 border-b border-[#d1cfc0] dark:border-[#3b332b]">
-            <div className="w-full max-w-7xl lg:max-w-none mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-              
-              <div className="space-y-3">
-                <h4 className="text-[#1a1a1a] dark:text-[#eee9df] font-display italic font-bold text-lg">The Scholastic Archive</h4>
-                <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-400 max-w-xs">
-                  Continuous academic learning, global community bonds, and peer-moderated student voices. Fusing the infinite pursuit of truth with real student papers.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="text-[#1a1a1a] dark:text-[#eee9df] font-sans uppercase tracking-widest font-bold text-xs">Academic Categories</h4>
-                <ul className="text-xs space-y-1.5 grid grid-cols-2 text-stone-600 dark:text-stone-400">
-                  {CATEGORIES.map(cat => (
-                    <li key={cat}>
-                      <button 
-                        onClick={() => scrollToLibrary(cat)}
-                        className="hover:text-emerald-800 dark:hover:text-amber-300 font-medium transition-colors cursor-pointer text-left"
-                      >
-                        {cat}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="text-[#1a1a1a] dark:text-[#eee9df] font-sans uppercase tracking-widest font-bold text-xs">Honor & Guidelines</h4>
-                <ul className="text-xs space-y-1.5 text-stone-600 dark:text-stone-400">
-                  <li><span className="text-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-500/40 px-2 py-0.5 rounded uppercase font-semibold">Under 18 Safe Platform</span></li>
-                  <li><span className="hover:text-emerald-800 dark:hover:text-amber-300 font-medium cursor-pointer">Community Honor Code Guidelines</span></li>
-                  <li><span className="hover:text-emerald-800 dark:hover:text-amber-300 font-medium cursor-pointer">Privacy Policy & Children's safety</span></li>
-                </ul>
-                <div className="pt-2">
-                  <button
-                    onClick={() => scrollToLibrary()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#523624] dark:bg-[#382417] hover:bg-[#3d2517] text-[#fcdcb6] rounded text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer border border-[#fcdcb6]/20"
-                  >
-                    <span>↑ Jump to Article Feed</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        <div className={`w-full max-w-7xl lg:max-w-none mx-auto ${loading ? 'py-4' : 'py-6'} px-6 sm:px-10 lg:px-12 text-center text-[11px] text-stone-500 dark:text-stone-400 font-sans flex flex-col sm:flex-row items-center justify-between gap-4`}>
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <p>© 2026 impactED Student Publishing Group. All student authors retain full publication ownership of their articles.</p>
-            <span className="hidden sm:inline text-stone-300 dark:text-stone-600">•</span>
-            <a 
-              href="https://impactedglobal.xyz" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-[#523624] dark:text-[#fcdcb6] hover:text-stone-900 dark:hover:text-amber-200 font-bold underline underline-offset-2 transition-colors"
-            >
-              impactedglobal.xyz ↗
-            </a>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[9px] uppercase tracking-wider bg-stone-100 dark:bg-[#1e1b18] px-2 py-0.5 border border-[#d1cfc0] dark:border-[#3b332b] text-stone-600 dark:text-stone-400">Est. 2024</span>
-            <p className="font-mono text-[9px]">PROJECT ID: peta-watch-85jvd (Firestore Active)</p>
-          </div>
-        </div>
-      </footer>
+      {/* GLOBAL EDITORIAL FOOTER */}
+      <EditorialFooter 
+        onSelectCategory={(cat) => scrollToLibrary(cat)}
+        onScrollToFeed={() => scrollToLibrary()}
+        loading={loading}
+      />
 
       {/* Global Authentication Modal */}
       <AuthModal 
