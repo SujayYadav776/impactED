@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Article, UserProfile, CATEGORIES, ReactionType, getStudentStats, CONTINENTS, SiteStats } from './types';
+import { Article, UserProfile, CATEGORIES, ReactionType, getStudentStats, SiteStats } from './types';
 import { firebaseService } from './firebaseService';
 
 // Import Components
-import GreenboardHero from './components/GreenboardHero';
-import GlobalReachMap from './components/GlobalReachMap';
-import ArticleCard from './components/ArticleCard';
 import CommentSection from './components/CommentSection';
 import ArticleEditor from './components/ArticleEditor';
 import AuthModal from './components/AuthModal';
@@ -14,18 +11,16 @@ import AdminPanel from './components/AdminPanel';
 import AcademicDashboard from './components/AcademicDashboard';
 import ReadingStreakTracker from './components/ReadingStreakTracker';
 import AcademicReader from './components/AcademicReader';
-import HangingTeamCards from './components/HangingTeamCards';
+import HomePage from './components/HomePage';
+import GuidedWritingPage from './components/GuidedWritingPage';
 import ThemeToggle from './components/ThemeToggle';
 import Loader from './components/Loader';
 import EditorialFooter from './components/EditorialFooter';
-// @ts-ignore
-import emptyLibraryImg from './assets/images/empty_library_1783953130670.jpg';
 // @ts-ignore
 import scholarHatLogo from './assets/images/impacted_infinity_logo_1785162114538.jpg';
 
 import { 
   BookOpen, 
-  Search, 
   PlusCircle, 
   ShieldAlert, 
   LogOut, 
@@ -38,12 +33,8 @@ import {
   Award, 
   Clock, 
   BookOpenCheck,
-  RotateCcw,
-  ChevronDown,
-  ChevronUp,
   User,
   Bookmark,
-  Users,
   ArrowRight,
   Trash2,
   FileText,
@@ -56,6 +47,9 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGuidedWriting, setIsGuidedWriting] = useState(false);
+  const [guidedPromptId, setGuidedPromptId] = useState('opinions');
+  const [openGuidedWritingAfterAuth, setOpenGuidedWritingAfterAuth] = useState(false);
   
   // App States
   const [articles, setArticles] = useState<Article[]>([]);
@@ -84,10 +78,23 @@ export default function App() {
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('');
 
   // Loaded and seed flag
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!loading) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+    };
+  }, [loading]);
 
   // Admin profiles showcase states
   const [adminProfiles, setAdminProfiles] = useState<UserProfile[]>([]);
@@ -112,7 +119,7 @@ export default function App() {
   });
 
   // Mobile library expansion state (show 3 articles initially on mobile)
-  const [isMobileLibraryExpanded, setIsMobileLibraryExpanded] = useState<boolean>(false);
+  const [isLibraryExpanded, setIsLibraryExpanded] = useState(false);
 
   const handleFinishReading = (articleId: string) => {
     setFinishReadingTrigger(prev => prev + 1);
@@ -121,6 +128,7 @@ export default function App() {
   const handleSelectArticle = (id: string) => {
     setSelectedArticleId(id);
     setIsWriting(false);
+    setIsGuidedWriting(false);
     setIsAdminPortal(false);
     setIsDashboard(false);
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -196,15 +204,26 @@ export default function App() {
   const handleAuthSuccess = (profile: UserProfile) => {
     setCurrentUser(profile);
     localStorage.setItem('impactED_current_user', JSON.stringify(profile));
+    if (openGuidedWritingAfterAuth) {
+      setOpenGuidedWritingAfterAuth(false);
+      setIsGuidedWriting(true);
+      setIsWriting(false);
+      setSelectedArticleId(null);
+      setIsDashboard(false);
+      setIsAdminPortal(false);
+      return;
+    }
     // If logging in as admin, swap straight to admin portal or reset
     if (profile.role === 'admin') {
       setIsAdminPortal(true);
       setIsWriting(false);
+      setIsGuidedWriting(false);
       setSelectedArticleId(null);
       setIsDashboard(false);
     } else {
       setIsDashboard(true);
       setIsWriting(false);
+      setIsGuidedWriting(false);
       setSelectedArticleId(null);
       setIsAdminPortal(false);
     }
@@ -215,6 +234,7 @@ export default function App() {
     localStorage.removeItem('impactED_current_user');
     setIsAdminPortal(false);
     setIsWriting(false);
+    setIsGuidedWriting(false);
     setSelectedArticleId(null);
     setIsDashboard(false);
   };
@@ -335,7 +355,25 @@ Begin with a clear research question that addresses an impactful issue in your l
   const handleEditDraft = (art: Article) => {
     setEditingArticle(art);
     setIsWriting(true);
+    setIsGuidedWriting(false);
     setSelectedArticleId(null);
+  };
+
+  const startGuidedWriting = (promptId: string) => {
+    setGuidedPromptId(promptId);
+    if (!currentUser) {
+      setOpenGuidedWritingAfterAuth(true);
+      setIsAuthOpen(true);
+      return;
+    }
+
+    setIsGuidedWriting(true);
+    setIsWriting(false);
+    setEditingArticle(null);
+    setSelectedArticleId(null);
+    setIsAdminPortal(false);
+    setIsDashboard(false);
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const handleDeleteArticle = (articleId: string) => {
@@ -394,39 +432,6 @@ Begin with a clear research question that addresses an impactful issue in your l
     }
   };
 
-  // Filter and Search computational query
-  const filteredArticles = articles.filter(art => {
-    // Only show published articles to non-admins on the homepage, or show user's own submissions
-    const isAuthor = currentUser && art.authorId === currentUser.uid;
-    const isPublic = art.status === 'Published';
-    
-    // For general browsing feed, exclude pending/rejected pieces unless they belong to current author
-    if (!isPublic && !isAuthor && currentUser?.role !== 'admin') {
-      return false;
-    }
-
-    const matchesSearch = 
-      art.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      art.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      art.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    const matchesCategory = selectedCategory ? art.category === selectedCategory : true;
-    const matchesCountry = (() => {
-      if (!selectedCountry) return true;
-      if (selectedCountry.startsWith('Continent:')) {
-        const continentName = selectedCountry.replace('Continent:', '').trim();
-        const continentObj = CONTINENTS.find(c => c.name === continentName);
-        if (continentObj) {
-          return continentObj.countries.includes(art.authorCountry);
-        }
-        return false;
-      }
-      return art.authorCountry === selectedCountry;
-    })();
-
-    return matchesSearch && matchesCategory && matchesCountry;
-  });
-
   const activeArticle = getEnrichedArticles().find(a => a.id === selectedArticleId);
 
   // Smooth scroll to Library section
@@ -436,6 +441,7 @@ Begin with a clear research question that addresses an impactful issue in your l
     }
     setSelectedArticleId(null);
     setIsWriting(false);
+    setIsGuidedWriting(false);
     setIsAdminPortal(false);
     setIsDashboard(false);
 
@@ -505,14 +511,14 @@ Begin with a clear research question that addresses an impactful issue in your l
       
       {/* GLOBAL ACADEMIC NAVBAR */}
       <header 
-        className="border-b border-[#523624]/40 sticky top-0 z-40 text-stone-100 shadow-lg select-none relative"
+        className="sticky top-0 z-40 relative border-b border-[#fcdcb6]/15 text-stone-100 shadow-[0_12px_30px_-20px_rgba(22,11,5,0.8)] select-none backdrop-blur-xl"
         style={{
-          background: 'radial-gradient(circle at 50% -20%, rgba(82, 54, 36, 0.98) 0%, rgba(58, 33, 19, 0.99) 55%, rgba(22, 11, 5, 1) 100%)'
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(91, 57, 37, 0.98) 0%, rgba(58, 35, 25, 0.99) 58%, rgba(30, 20, 16, 1) 100%)'
         }}
       >
         {/* Dynamic Fading Grid overlay subtly carried on the navbar */}
         <div 
-          className="absolute inset-0 pointer-events-none opacity-20 overflow-hidden"
+          className="absolute inset-0 pointer-events-none opacity-[0.12] overflow-hidden"
           style={{
             backgroundImage: `
               linear-gradient(to right, rgba(252, 220, 182, 0.25) 1px, transparent 1px),
@@ -522,12 +528,12 @@ Begin with a clear research question that addresses an impactful issue in your l
           }}
         />
 
-        <div className="w-full max-w-7xl lg:max-w-none mx-auto px-3 sm:px-6 lg:px-10 xl:px-12 h-16 flex items-center justify-between relative z-10 gap-2">
+        <div className="w-full max-w-7xl lg:max-w-none mx-auto px-3 sm:px-6 lg:px-10 xl:px-12 h-[4.5rem] flex items-center justify-between relative z-10 gap-2">
           
           {/* Logo Branding */}
           <div 
             onClick={() => scrollToLibrary()}
-            className="flex items-center gap-2 cursor-pointer group shrink-0"
+            className="flex items-center gap-2.5 cursor-pointer group shrink-0 rounded-full pr-3 transition-colors hover:bg-white/[0.04]"
           >
             <img 
               src={scholarHatLogo} 
@@ -556,7 +562,7 @@ Begin with a clear research question that addresses an impactful issue in your l
 
             <button
               onClick={() => scrollToLibrary()}
-              className="px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-sans uppercase tracking-widest font-semibold text-stone-200 hover:text-white transition-all cursor-pointer"
+              className="px-4 py-2 text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.14em] font-bold text-stone-200 hover:text-[#fcdcb6] hover:bg-white/[0.08] rounded-full transition-all cursor-pointer"
             >
               Library
             </button>
@@ -564,9 +570,9 @@ Begin with a clear research question that addresses an impactful issue in your l
             {/* Student Dashboard Action */}
             {currentUser && currentUser.role === 'student' && (
               <button
-                onClick={() => { setIsDashboard(true); setIsWriting(false); setSelectedArticleId(null); setIsAdminPortal(false); }}
-                className={`px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-sans uppercase tracking-widest font-semibold transition-all ${
-                  isDashboard ? 'text-[#fcdcb6] font-bold border-b-2 border-[#fcdcb6]' : 'text-stone-300 hover:text-[#fcdcb6]'
+                onClick={() => { setIsDashboard(true); setIsWriting(false); setIsGuidedWriting(false); setSelectedArticleId(null); setIsAdminPortal(false); }}
+                className={`px-4 py-2 text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.12em] font-semibold rounded-full transition-all ${
+                  isDashboard ? 'text-[#fcdcb6] bg-white/[0.08] font-bold' : 'text-stone-300 hover:text-[#fcdcb6] hover:bg-white/[0.08]'
                 }`}
               >
                 <span>Academic </span>Dashboard
@@ -576,8 +582,8 @@ Begin with a clear research question that addresses an impactful issue in your l
             {/* Writer Action */}
             {currentUser && currentUser.role === 'student' && (
               <button
-                onClick={() => { setIsWriting(true); setSelectedArticleId(null); setIsAdminPortal(false); setIsDashboard(false); setEditingArticle(null); }}
-                className="px-2.5 sm:px-4 py-1.5 bg-[#fcdcb6] hover:bg-[#f8c992] text-[#3d2517] rounded-none text-[11px] sm:text-xs font-sans uppercase tracking-widest font-bold transition-all active:scale-95 flex items-center gap-1 shadow-sm"
+                onClick={() => { setIsGuidedWriting(false); setIsWriting(true); setSelectedArticleId(null); setIsAdminPortal(false); setIsDashboard(false); setEditingArticle(null); }}
+                className="px-4 py-2 bg-[#fcdcb6] hover:bg-[#f8c992] text-[#3d2517] rounded-full text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.12em] font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>Compose</span>
@@ -587,8 +593,8 @@ Begin with a clear research question that addresses an impactful issue in your l
             {/* Moderator Desk (Role check) */}
             {currentUser && currentUser.role === 'admin' && (
               <button
-                onClick={() => { setIsAdminPortal(true); setIsWriting(false); setSelectedArticleId(null); setIsDashboard(false); }}
-                className="px-2.5 sm:px-4 py-1.5 bg-[#fcdcb6] hover:bg-[#f8c992] text-[#3d2517] rounded-none text-[11px] sm:text-xs font-sans uppercase tracking-widest font-bold flex items-center gap-1 shadow-sm"
+                onClick={() => { setIsAdminPortal(true); setIsWriting(false); setIsGuidedWriting(false); setSelectedArticleId(null); setIsDashboard(false); }}
+                className="px-4 py-2 bg-[#fcdcb6] hover:bg-[#f8c992] text-[#3d2517] rounded-full text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.12em] font-bold flex items-center gap-1.5 shadow-sm"
               >
                 <BookOpenCheck className="w-3.5 h-3.5 text-[#3d2517]" />
                 <span>Moderator Board</span>
@@ -631,7 +637,7 @@ Begin with a clear research question that addresses an impactful issue in your l
                 
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 text-stone-300 hover:text-red-300 rounded hover:bg-white/10 transition-colors shrink-0"
+                  className="p-2 text-stone-300 hover:text-red-300 rounded-full hover:bg-white/10 transition-colors shrink-0"
                   title="Log out of classroom profile"
                 >
                   <LogOut className="w-4 h-4" />
@@ -640,7 +646,7 @@ Begin with a clear research question that addresses an impactful issue in your l
             ) : (
               <button
                 onClick={() => setIsAuthOpen(true)}
-                className="px-2.5 sm:px-4 py-1.5 bg-white/10 hover:bg-white/20 text-[#fcdcb6] border border-[#fcdcb6]/30 text-[11px] sm:text-xs font-sans uppercase tracking-widest font-bold transition-all active:scale-95"
+                className="px-5 py-2 bg-white/[0.06] hover:bg-[#fcdcb6] text-[#fcdcb6] hover:text-[#3d2517] border border-[#fcdcb6]/35 rounded-full text-[10px] sm:text-[11px] font-sans uppercase tracking-[0.14em] font-bold transition-all active:scale-95"
               >
                 Sign In
               </button>
@@ -660,7 +666,7 @@ Begin with a clear research question that addresses an impactful issue in your l
             />
             <button
               onClick={() => setIsMenuOpen(true)}
-              className="p-2 text-[#fcdcb6] hover:bg-white/10 rounded-lg transition-colors active:scale-95 flex items-center justify-center cursor-pointer"
+              className="p-2.5 text-[#fcdcb6] hover:bg-white/10 rounded-full transition-colors active:scale-95 flex items-center justify-center cursor-pointer"
               title="Open menu options"
               aria-label="Open menu options"
             >
@@ -743,7 +749,7 @@ Begin with a clear research question that addresses an impactful issue in your l
                       <p className="text-xs text-stone-300 font-medium">Welcome to impactED Journal</p>
                       <button
                         onClick={() => { setIsAuthOpen(true); setIsMenuOpen(false); }}
-                        className="w-full py-2 bg-[#fcdcb6] hover:bg-[#f8c992] text-[#3d2517] font-sans text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer shadow-sm active:scale-95"
+                        className="w-full py-2.5 bg-[#fcdcb6] hover:bg-[#f8c992] text-[#3d2517] font-sans text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer shadow-sm active:scale-95"
                       >
                         Sign In / Register
                       </button>
@@ -779,7 +785,7 @@ Begin with a clear research question that addresses an impactful issue in your l
 
                     {currentUser && currentUser.role === 'student' && (
                       <button
-                        onClick={() => { setIsDashboard(true); setIsWriting(false); setSelectedArticleId(null); setIsAdminPortal(false); setIsMenuOpen(false); }}
+                        onClick={() => { setIsDashboard(true); setIsWriting(false); setIsGuidedWriting(false); setSelectedArticleId(null); setIsAdminPortal(false); setIsMenuOpen(false); }}
                         className={`w-full text-left px-3.5 py-2.5 rounded-lg font-sans text-xs font-semibold uppercase tracking-wider flex items-center gap-2.5 transition-colors cursor-pointer ${
                           isDashboard ? 'bg-[#fcdcb6] text-[#3d2517] font-bold shadow-xs' : 'bg-white/5 hover:bg-white/10 text-stone-100'
                         }`}
@@ -791,7 +797,7 @@ Begin with a clear research question that addresses an impactful issue in your l
 
                     {currentUser && currentUser.role === 'student' && (
                       <button
-                        onClick={() => { setIsWriting(true); setSelectedArticleId(null); setIsAdminPortal(false); setIsDashboard(false); setEditingArticle(null); setIsMenuOpen(false); }}
+                        onClick={() => { setIsGuidedWriting(false); setIsWriting(true); setSelectedArticleId(null); setIsAdminPortal(false); setIsDashboard(false); setEditingArticle(null); setIsMenuOpen(false); }}
                         className="w-full text-left px-3.5 py-2.5 rounded-lg bg-[#fcdcb6]/20 hover:bg-[#fcdcb6]/30 text-[#fcdcb6] font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-2.5 transition-colors border border-[#fcdcb6]/30 cursor-pointer"
                       >
                         <PlusCircle className="w-4 h-4" />
@@ -801,7 +807,7 @@ Begin with a clear research question that addresses an impactful issue in your l
 
                     {currentUser && currentUser.role === 'admin' && (
                       <button
-                        onClick={() => { setIsAdminPortal(true); setIsWriting(false); setSelectedArticleId(null); setIsDashboard(false); setIsMenuOpen(false); }}
+                        onClick={() => { setIsAdminPortal(true); setIsWriting(false); setIsGuidedWriting(false); setSelectedArticleId(null); setIsDashboard(false); setIsMenuOpen(false); }}
                         className="w-full text-left px-3.5 py-2.5 rounded-lg bg-[#fcdcb6] text-[#3d2517] font-sans text-xs font-bold uppercase tracking-wider flex items-center gap-2.5 transition-colors cursor-pointer"
                       >
                         <BookOpenCheck className="w-4 h-4" />
@@ -837,8 +843,11 @@ Begin with a clear research question that addresses an impactful issue in your l
           <div className="flex-1 min-h-[calc(100vh-140px)] flex flex-col items-center justify-center py-16 px-4 sm:px-6 lg:px-10 xl:px-12 text-center my-auto">
             <div className="flex flex-col items-center justify-center max-w-md mx-auto">
               <Loader />
-              <p className="text-stone-600 text-sm font-sans font-medium tracking-wide">
-                Opening textbooks and retrieving global manuscripts...
+              <p className="font-platform-serif text-xl font-medium tracking-tight text-[#2b241c] dark:text-[#f4ede2]">
+                Gathering student voices...
+              </p>
+              <p className="font-platform-sans mt-2 text-sm leading-relaxed text-[#7c7061] dark:text-[#c7bbaa]">
+                Getting stories and perspectives ready for you.
               </p>
             </div>
           </div>
@@ -858,6 +867,27 @@ Begin with a clear research question that addresses an impactful issue in your l
                 onToggleBookmark={handleToggleBookmark}
                 onFinishReading={handleFinishReading}
               />
+            ) :
+
+            isGuidedWriting && currentUser ? (
+              <motion.div
+                key="guided-writer"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+              >
+                <GuidedWritingPage
+                  currentUser={currentUser}
+                  initialPromptId={guidedPromptId}
+                  onClose={() => setIsGuidedWriting(false)}
+                  onDraftSaved={loadArticles}
+                  onSubmitSuccess={() => {
+                    setIsGuidedWriting(false);
+                    loadArticles();
+                    showNotification('Your writing has been submitted for review.');
+                  }}
+                />
+              </motion.div>
             ) :
 
             /* SCREEN 2: ARTICLE WRITING COMPILER DECK (FR-2) */
@@ -912,6 +942,7 @@ Begin with a clear research question that addresses an impactful issue in your l
                   }}
                   onEditDraft={(art) => {
                     setEditingArticle(art);
+                    setIsGuidedWriting(false);
                     setIsWriting(true);
                     setSelectedArticleId(null);
                     setIsAdminPortal(false);
@@ -933,184 +964,34 @@ Begin with a clear research question that addresses an impactful issue in your l
 
             /* SCREEN 5: HOMEPAGE Feed / Discover Desk */
             (
-              <motion.div 
-                key="homepage"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="pb-16 flex flex-col space-y-12 sm:space-y-16"
-              >
-                {/* Classroom Blackboard & Book Stack Hero (Full Bleed Edge-to-Edge) */}
-                <GreenboardHero 
-                  articles={articles}
-                  onSelectArticle={handleSelectArticle}
-                  onWriteEssay={() => {
-                    if (!currentUser) {
-                      setIsAuthOpen(true);
-                    } else {
-                      setIsWriting(true);
-                      setSelectedArticleId(null);
-                      setIsAdminPortal(false);
-                      setEditingArticle(null);
-                    }
-                  }}
-                />
-
-                {/* Flex container for reordering Analytics and Article Feed on mobile */}
-                <div className="flex flex-col space-y-12 sm:space-y-16">
-                  {/* Global interactive Atlas Widget (Analytics Section) - Order 2 on mobile, Order 1 on desktop */}
-                  <div className="order-2 md:order-1 px-4 sm:px-6 lg:px-10 xl:px-12">
-                    <GlobalReachMap 
-                      selectedCountry={selectedCountry} 
-                      onSelectCountry={setSelectedCountry} 
-                      articles={articles}
-                      onSelectArticle={(art) => handleSelectArticle(art.id)}
-                    />
-                  </div>
-
-                  {/* Library Books Feed Filter bar & Complete Article Section - Order 1 on mobile, Order 2 on desktop */}
-                  <div id="library-section" className="order-1 md:order-2 px-4 sm:px-6 lg:px-10 xl:px-12 space-y-6">
-                    
-                    {/* Filter bar card */}
-                    <div className="bg-white dark:bg-[#1c1814] rounded border border-[#d1cfc0] dark:border-[#3b332b] p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs">
-                      
-                      {/* Search query box */}
-                      <div className="relative w-full md:max-w-md">
-                        <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-stone-400 dark:text-stone-500" />
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Search essays, poems, student authors, or keywords..."
-                          className="w-full bg-stone-50/60 dark:bg-[#141210] border border-[#d1cfc0] dark:border-[#3b332b] rounded pl-10 pr-4 py-2.5 text-xs focus:ring-1 focus:ring-emerald-800 dark:focus:ring-amber-500 shadow-inner text-[#1a1a1a] dark:text-[#eee9df] placeholder:text-stone-400 dark:placeholder:text-stone-500"
-                        />
-                      </div>
-
-                      {/* Quick clear stats */}
-                      {(selectedCategory || selectedCountry || searchQuery) && (
-                        <button
-                          onClick={() => { setSelectedCategory(''); setSelectedCountry(''); setSearchQuery(''); }}
-                          className="text-stone-500 dark:text-stone-400 text-xs hover:text-emerald-800 dark:hover:text-amber-300 font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Clear Filters</span>
-                        </button>
-                      )}
-
-                    </div>
-
-                    {/* Active Filtering indicators */}
-                    {(selectedCountry || selectedCategory) && (
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-stone-400 font-sans uppercase tracking-wider">
-                        <span>Currently filtering:</span>
-                        {selectedCategory && (
-                          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-300 rounded-none font-bold">
-                            Subject: {selectedCategory}
-                          </span>
-                        )}
-                        {selectedCountry && (
-                          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-300 rounded-none font-bold">
-                            Region: {selectedCountry}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Feed Grid (FR-4.1) */}
-                    {filteredArticles.length > 0 ? (
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                          <AnimatePresence mode="popLayout">
-                            {filteredArticles.map((art, artIndex) => (
-                              <div 
-                                key={art.id}
-                                className={artIndex >= 3 && !isMobileLibraryExpanded ? "hidden md:block" : "block"}
-                              >
-                                <ArticleCard 
-                                  article={art} 
-                                  onSelect={handleSelectArticle}
-                                  articles={articles}
-                                  currentUser={currentUser}
-                                  onToggleBookmark={handleToggleBookmark}
-                                  isBookmarked={currentUser?.bookmarks?.includes(art.id) || false}
-                                />
-                              </div>
-                            ))}
-                          </AnimatePresence>
-                        </div>
-
-                        {/* Mobile View More / View Less Button */}
-                        {filteredArticles.length > 3 && (
-                          <div className="flex md:hidden justify-center pt-2">
-                            <button
-                              type="button"
-                              onClick={() => setIsMobileLibraryExpanded(!isMobileLibraryExpanded)}
-                              style={{ paddingTop: '11px', marginLeft: '1px', marginTop: '-30px' }}
-                              className="px-5 pb-2.5 bg-white dark:bg-[#1c1814] border border-[#d1cfc0] dark:border-[#3b332b] hover:border-emerald-700 dark:hover:border-amber-500 text-[#1a1a1a] dark:text-[#eee9df] hover:text-emerald-900 dark:hover:text-amber-300 text-xs font-mono font-bold uppercase tracking-wider rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-                            >
-                              <span>
-                                {isMobileLibraryExpanded 
-                                  ? "Show Less Articles" 
-                                  : `View More Articles (${filteredArticles.length - 3} More)`}
-                              </span>
-                              {isMobileLibraryExpanded ? (
-                                <ChevronUp className="w-4 h-4 text-emerald-800 dark:text-amber-400" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4 text-emerald-800 dark:text-amber-400" />
-                              )}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 px-6 bg-white dark:bg-[#1c1814] rounded-none border border-[#d1cfc0] dark:border-[#3b332b] flex flex-col items-center justify-center space-y-4">
-                        <div className="w-48 h-48 rounded-full overflow-hidden border border-[#d1cfc0]/60 dark:border-[#3b332b] bg-[#fdfcf0] dark:bg-[#141210] p-1 shadow-inner relative group">
-                          <img 
-                            src={emptyLibraryImg} 
-                            alt="No Publications Found" 
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover rounded-full group-hover:scale-105 transition-transform duration-500"
-                          />
-                        </div>
-                        <div className="space-y-1 max-w-sm">
-                          <h4 className="font-display font-bold text-[#1a1a1a] dark:text-[#eee9df] text-lg">No Student Publications Found</h4>
-                          <p className="text-stone-500 dark:text-stone-400 text-xs leading-relaxed">
-                            Try adjusting your filters, clearing your search query, or checking another participating region.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-                </div>
-
-                {/* Meet Our Team Section */}
-                <div className="pt-8 pb-12 px-4 sm:px-6 lg:px-10 xl:px-12">
-                  <div className="bg-[#fdfcf0]/40 dark:bg-[#1c1814]/80 rounded-3xl border border-[#d1cfc0]/70 dark:border-[#3b332b] p-8 md:p-12 shadow-xs overflow-visible">
-                    <div className="text-center max-w-xl mx-auto mb-4">
-                      <h3 className="font-display font-black text-3xl text-stone-900 dark:text-[#eee9df] tracking-tight flex items-center justify-center gap-2">
-                        <Users className="w-7 h-7 text-emerald-800 dark:text-amber-400" />
-                        Meet Our Team
-                      </h3>
-                      <p className="text-xs text-stone-500 dark:text-stone-400 font-serif italic mt-2">
-                        Dedicated educators and academic curators guiding the voices of tomorrow's scholarship.
-                      </p>
-                    </div>
-
-                    {adminsLoading ? (
-                      <div className="text-center py-16">
-                        <div className="w-8 h-8 border-3 border-emerald-800 dark:border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                        <span className="text-xs text-stone-500 dark:text-stone-400 font-mono tracking-wider">Retrieving editorial board members...</span>
-                      </div>
-                    ) : (
-                      <div className="overflow-visible">
-                        <HangingTeamCards adminProfiles={adminProfiles} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-              </motion.div>
+              <HomePage
+                articles={articles}
+                currentUser={currentUser}
+                selectedCategory={selectedCategory}
+                searchQuery={searchQuery}
+                isLibraryExpanded={isLibraryExpanded}
+                adminProfiles={adminProfiles}
+                adminsLoading={adminsLoading}
+                onSelectArticle={handleSelectArticle}
+                onStartGuidedWriting={startGuidedWriting}
+                onWriteEssay={() => {
+                  if (!currentUser) {
+                    setIsAuthOpen(true);
+                  } else {
+                    setIsWriting(true);
+                    setSelectedArticleId(null);
+                    setIsAdminPortal(false);
+                    setEditingArticle(null);
+                  }
+                }}
+                onSearchChange={setSearchQuery}
+                onClearFilters={() => {
+                  setSelectedCategory('');
+                  setSearchQuery('');
+                }}
+                onToggleLibrary={() => setIsLibraryExpanded((expanded) => !expanded)}
+                onToggleBookmark={handleToggleBookmark}
+              />
             )}
 
           </AnimatePresence>
@@ -1118,17 +999,21 @@ Begin with a clear research question that addresses an impactful issue in your l
 
       </main>
 
-      {/* GLOBAL EDITORIAL FOOTER */}
-      <EditorialFooter 
-        onSelectCategory={(cat) => scrollToLibrary(cat)}
-        onScrollToFeed={() => scrollToLibrary()}
-        loading={loading}
-      />
+      {!loading && (
+        <EditorialFooter
+          onSelectCategory={(cat) => scrollToLibrary(cat)}
+          onScrollToFeed={() => scrollToLibrary()}
+          loading={loading}
+        />
+      )}
 
       {/* Global Authentication Modal */}
       <AuthModal 
         isOpen={isAuthOpen} 
-        onClose={() => setIsAuthOpen(false)} 
+        onClose={() => {
+          setIsAuthOpen(false);
+          setOpenGuidedWritingAfterAuth(false);
+        }}
         onAuthSuccess={handleAuthSuccess} 
       />
 
