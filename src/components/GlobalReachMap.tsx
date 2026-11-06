@@ -226,7 +226,7 @@ export default function GlobalReachMap({ selectedCountry, onSelectCountry, artic
 
   return (
     <div 
-      className="bg-white dark:bg-[#191613] text-[#1a1a1a] dark:text-[#eee9df] p-6 sm:p-8 border border-[#d1cfc0] dark:border-[#383129] shadow-sm relative overflow-hidden transition-colors"
+      className="rounded-3xl bg-[#f6f1e7] dark:bg-[#191613] text-[#2b241c] dark:text-[#eee9df] p-5 sm:p-8 border border-[#e1d8c6] dark:border-[#383129] shadow-sm relative overflow-hidden transition-colors"
       style={{
         backgroundImage: `
           linear-gradient(to right, rgba(0, 0, 0, 0.015) 1px, transparent 1px),

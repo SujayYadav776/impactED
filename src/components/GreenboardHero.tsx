@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight, Heart, Award, BookOpen, Star } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Article } from '../types';
 import SpecularButton from './SpecularButton';
 import { useTheme } from '../context/ThemeContext';
@@ -19,6 +19,7 @@ export default function GreenboardHero({
   onWriteEssay = () => {}
 }: GreenboardHeroProps) {
   const { isDark } = useTheme();
+  const shouldReduceMotion = useReducedMotion();
 
   // Compute real dynamic statistics from existing articles
   const publishedArticles = articles.filter(a => a.status === 'Published');
@@ -83,7 +84,12 @@ export default function GreenboardHero({
       <div className="absolute top-0 right-0 translate-x-1/2 translate-y-1/4 w-[450px] h-[450px] bg-[#3a2012]/35 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Centered Main Hero Text Area */}
-      <div className="max-w-4xl mx-auto text-center space-y-6 relative z-20 mb-10 lg:mb-4">
+      <motion.div
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+        className="max-w-4xl mx-auto text-center space-y-6 relative z-20 mb-10 lg:mb-4"
+      >
         <h1 className="text-[32px] sm:text-[43px] lg:text-[43px] font-display font-medium text-[#111111] dark:text-[#f7f4ee] tracking-tight leading-[47.2px] max-w-3xl mx-auto transition-colors">
           A global student-led initiative collecting <br className="hidden sm:inline" />
           <span className="font-serif italic font-normal text-[#111111] dark:text-[#fcdcb6] transition-colors">authentic, unfiltered stories</span> from learners around the world.
@@ -120,7 +126,7 @@ export default function GreenboardHero({
             Get Started
           </SpecularButton>
         </div>
-      </div>
+      </motion.div>
 
       {/* Bento Collage Grid with Product Sans Font */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 mt-1.5 lg:-mt-[90px] relative z-10 font-productsans">
